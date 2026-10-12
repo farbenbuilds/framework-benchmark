@@ -1,0 +1,56 @@
+name: Benchmark Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      framework_filter:
+        description: 'Optional framework name to benchmark'
+        required: false
+        default: 'all'
+  schedule:
+    # Run nightly at 00:00 UTC
+    - cron: '0 0 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: Run Benchmark Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-benchmark-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-benchmark-
+
+      - name: Verify host environment
+        run: sh scripts/verify_host.sh
+
+      - name: Build benchmark orchestrator
+        run: cargo build --release --bin orchestrator
+
+      - name: Run orchestrator
+        run: ./target/release/orchestrator frameworks results
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            results/
+          retention-days: 30

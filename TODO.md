@@ -13,11 +13,11 @@ The project evaluates HTTP and WebSocket server and client frameworks across lan
 3. **Phase 2: Dual-Libc Infrastructure & Engine Core**: [docs/roadmap/phase2_load_engine.md](docs/roadmap/phase2_load_engine.md) [Completed]
    - Nix flakes, Docker multi-stage templates, Tokio/Httparse load generator, and cgroups v2 harvester.
 4. **Phase 3: Framework Registry & Baseline Implementations**: [docs/roadmap/phase3_frameworks.md](docs/roadmap/phase3_frameworks.md) [Pending Selection]
-   - Registry conventions established in `frameworks/README.md`; framework list pending user selection.
+   - Framework registry conventions established in `frameworks/README.md`; framework implementations ready to add upon user selection.
 5. **Phase 4: Aggregation, Metrics Processing & Markdown Engine**: [docs/roadmap/phase4_reporter.md](docs/roadmap/phase4_reporter.md) [Completed]
    - Pure aggregation logic, SVG bar charts, append-only historical index, and Markdown table generator.
-6. **Phase 5: Bare-Metal Deployment & GitHub CI/CD**: [docs/roadmap/phase5_deployment.md](docs/roadmap/phase5_deployment.md) [In Progress]
-   - Linux host tuning (`setup_host.sh`), verification (`verify_host.sh`), and GitHub CI/CD lint pipeline.
+6. **Phase 5: Bare-Metal Deployment & GitHub CI/CD**: [docs/roadmap/phase5_deployment.md](docs/roadmap/phase5_deployment.md) [Completed]
+   - Linux host tuning (`setup_host.sh`), verification (`verify_host.sh`), runner script (`run_benchmarks.sh`), and GitHub CI/CD workflows (`lint.yml`, `benchmark.yml`).
 7. **Verification & Acceptance Criteria**: [docs/roadmap/acceptance_criteria.md](docs/roadmap/acceptance_criteria.md)
    - Quality gates, 200 LOC ceiling, zero emojis, zero-allocation hot paths, and reproducibility.
 

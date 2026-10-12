@@ -242,6 +242,7 @@ dependencies = [
  "collector",
  "common",
  "load-gen",
+ "reporter",
  "thiserror",
  "tokio",
 ]
