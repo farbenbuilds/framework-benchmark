@@ -43,6 +43,6 @@ fn test_harvest_aggregator_metrics() {
     let res = agg.finalize();
     assert_eq!(res.peak_rss_bytes, 30_000_000);
     assert_eq!(res.avg_rss_bytes, 20_000_000);
-    assert_eq!(res.cpu_user_pct, 65.0);
+    assert!((res.cpu_user_pct - 65.0).abs() < f32::EPSILON);
     assert_eq!(res.context_switches, 2000);
 }
