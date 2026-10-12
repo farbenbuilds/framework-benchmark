@@ -1,6 +1,8 @@
-FROM debian:bookworm-slim AS base
+FROM ruby:3.3-bookworm
 WORKDIR /app
-RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-COPY . /app
+RUN apt-get update -qq && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
+COPY Gemfile ./
+RUN bundle install
+COPY server.rb ./
 EXPOSE 8080
-ENTRYPOINT ["/app/server"]
+ENTRYPOINT ["ruby", "server.rb"]

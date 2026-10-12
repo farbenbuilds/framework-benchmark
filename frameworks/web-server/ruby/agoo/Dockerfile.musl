@@ -1,6 +1,8 @@
-FROM alpine:3.21 AS base
+FROM ruby:3.3-alpine3.21
 WORKDIR /app
-RUN apk add --no-cache ca-certificates curl
-COPY . /app
+RUN apk add --no-cache build-base
+COPY Gemfile ./
+RUN bundle install
+COPY server.rb ./
 EXPOSE 8080
-ENTRYPOINT ["/app/server"]
+ENTRYPOINT ["ruby", "server.rb"]

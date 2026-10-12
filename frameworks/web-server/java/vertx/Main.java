@@ -1,38 +1,24 @@
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpExchange;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
 
 public class Main {
-    public static void main(String[] args) throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+    public static void main(String[] args) {
+        Vertx vertx = Vertx.vertx();
+        HttpServer server = vertx.createHttpServer();
+        Router router = Router.router(vertx);
 
-        server.createContext("/healthz", exchange -> {
-            exchange.sendResponseHeaders(200, -1);
-            exchange.close();
-        });
+        router.get("/healthz").handler(ctx -> ctx.response().setStatusCode(200).end());
 
-        server.createContext("/plaintext", exchange -> {
-            byte[] response = "Hello, World!".getBytes();
-            exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
-            exchange.sendResponseHeaders(200, response.length);
-            OutputStream os = exchange.getResponseBody();
-            os.write(response);
-            os.close();
-        });
+        router.get("/plaintext").handler(ctx -> ctx.response()
+            .putHeader("Content-Type", "text/plain; charset=utf-8")
+            .end("Hello, World!"));
 
-        server.createContext("/json", exchange -> {
-            byte[] response = "{\"message\": \"Hello, World!\"}".getBytes();
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, response.length);
-            OutputStream os = exchange.getResponseBody();
-            os.write(response);
-            os.close();
-        });
+        router.get("/json").handler(ctx -> ctx.response()
+            .putHeader("Content-Type", "application/json")
+            .end(new JsonObject().put("message", "Hello, World!").encode()));
 
-        server.setExecutor(null);
-        server.start();
+        server.requestHandler(router).listen(8080);
     }
 }

@@ -1,23 +1,40 @@
 <?php
 
-$server = stream_socket_server("tcp://0.0.0.0:8080", $errno, $errstr);
-if (!$server) {
-    exit(1);
-}
+require_once __DIR__ . '/vendor/autoload.php';
 
-$json = json_encode(['message' => 'Hello, World!']);
+use Workerman\Worker;
+use Workerman\Protocols\Http\Response;
 
-while ($conn = stream_socket_accept($server)) {
-    $req = fread($conn, 1024);
-    if (strpos($req, 'GET /healthz') === 0) {
-        fwrite($conn, "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n");
-    } elseif (strpos($req, 'GET /plaintext') === 0) {
-        fwrite($conn, "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 13\r\n\r\nHello, World!");
-    } elseif (strpos($req, 'GET /json') === 0) {
-        $len = strlen($json);
-        fwrite($conn, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {$len}\r\n\r\n{$json}");
-    } else {
-        fwrite($conn, "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
+$http_worker = new Worker("http://0.0.0.0:8080");
+$http_worker->count = 4;
+
+$http_worker->onMessage = function ($connection, $request) {
+    $path = $request->path();
+
+    if ($path === '/healthz') {
+        $connection->send(new Response(200));
+        return;
     }
-    fclose($conn);
-}
+
+    if ($path === '/plaintext') {
+        $connection->send(new Response(
+            200,
+            ['Content-Type' => 'text/plain; charset=utf-8'],
+            'Hello, World!'
+        ));
+        return;
+    }
+
+    if ($path === '/json') {
+        $connection->send(new Response(
+            200,
+            ['Content-Type' => 'application/json'],
+            json_encode(['message' => 'Hello, World!'])
+        ));
+        return;
+    }
+
+    $connection->send(new Response(404));
+};
+
+Worker::runAll();

@@ -1,6 +1,11 @@
-FROM debian:bookworm-slim AS base
+FROM maven:3.9-eclipse-temurin-21-jammy AS build
+WORKDIR /src
+COPY pom.xml ./
+COPY Main.java ./src/main/java/Main.java
+RUN mvn clean package -DskipTests
+
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-COPY . /app
+COPY --from=build /src/target/*.jar /app/app.jar
 EXPOSE 8080
-ENTRYPOINT ["/app/server"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

@@ -1,6 +1,6 @@
-FROM debian:bookworm-slim AS base
+FROM dunglas/frankenphp:latest-bookworm
 WORKDIR /app
-RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-COPY . /app
+COPY server.php /app/index.php
 EXPOSE 8080
-ENTRYPOINT ["/app/server"]
+ENV SERVER_NAME=":8080"
+ENTRYPOINT ["frankenphp", "php-server", "--listen", ":8080", "--root", "/app"]
