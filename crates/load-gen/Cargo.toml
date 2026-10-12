@@ -7,6 +7,11 @@ license.workspace = true
 
 [dependencies]
 common = { path = "../common" }
+tokio = { workspace = true }
+hdrhistogram = { workspace = true }
+bytes = { workspace = true }
+httparse = { workspace = true }
+thiserror = { workspace = true }
 
 [lints]
 workspace = true
