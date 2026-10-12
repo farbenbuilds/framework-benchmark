@@ -1,8 +1,14 @@
-var builder = WebApplication.CreateBuilder(args);
-var app = builder.Build();
+using GenHTTP.Engine.Internal;
+using GenHTTP.Modules.IO;
+using GenHTTP.Modules.Layouting;
 
-app.MapGet("/healthz", () => Results.Ok());
-app.MapGet("/plaintext", () => Results.Text("Hello, World!", "text/plain; charset=utf-8"));
-app.MapGet("/json", () => Results.Json(new { message = "Hello, World!" }));
+var app = Layout.Create()
+    .Add("healthz", Content.From(Resource.FromString("")))
+    .Add("plaintext", Content.From(Resource.FromString("Hello, World!")))
+    .Add("json", Content.From(Resource.FromString("{\"message\": \"Hello, World!\"}")));
 
-app.Run("http://0.0.0.0:8080");
+var host = Host.Create()
+    .Handler(app)
+    .Port(8080);
+
+return await host.RunAsync();
