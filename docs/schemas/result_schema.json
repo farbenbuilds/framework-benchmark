@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunResult",
+  "description": "Benchmark run result artifact schema",
+  "type": "object",
+  "required": [
+    "run_id",
+    "framework_name",
+    "framework_version",
+    "libc",
+    "timestamp_epoch_secs",
+    "machine",
+    "benchmarks"
+  ],
+  "properties": {
+    "run_id": { "type": "string" },
+    "framework_name": { "type": "string" },
+    "framework_version": { "type": "string" },
+    "libc": { "type": "string", "enum": ["glibc", "musl"] },
+    "timestamp_epoch_secs": { "type": "integer", "minimum": 0 },
+    "machine": {
+      "type": "object",
+      "required": ["hostname", "os_release", "kernel_version", "cpu_model", "physical_cores", "logical_cores", "total_memory_mb"],
+      "properties": {
+        "hostname": { "type": "string" },
+        "os_release": { "type": "string" },
+        "kernel_version": { "type": "string" },
+        "cpu_model": { "type": "string" },
+        "physical_cores": { "type": "integer", "minimum": 1 },
+        "logical_cores": { "type": "integer", "minimum": 1 },
+        "total_memory_mb": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "benchmarks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "category",
+          "concurrency",
+          "duration_secs",
+          "requests_total",
+          "requests_per_sec",
+          "transfer_mb_per_sec",
+          "latency",
+          "resources",
+          "status_codes"
+        ],
+        "properties": {
+          "category": { "type": "string" },
+          "concurrency": { "type": "integer", "minimum": 1 },
+          "duration_secs": { "type": "integer", "minimum": 1 },
+          "requests_total": { "type": "integer", "minimum": 0 },
+          "requests_per_sec": { "type": "number", "minimum": 0 },
+          "transfer_mb_per_sec": { "type": "number", "minimum": 0 },
+          "latency": {
+            "type": "object",
+            "required": ["min_us", "p50_us", "p75_us", "p90_us", "p99_us", "p99_9_us", "p99_99_us", "max_us", "std_dev_us"],
+            "properties": {
+              "min_us": { "type": "integer" },
+              "p50_us": { "type": "integer" },
+              "p75_us": { "type": "integer" },
+              "p90_us": { "type": "integer" },
+              "p99_us": { "type": "integer" },
+              "p99_9_us": { "type": "integer" },
+              "p99_99_us": { "type": "integer" },
+              "max_us": { "type": "integer" },
+              "std_dev_us": { "type": "number" }
+            }
+          },
+          "resources": {
+            "type": "object",
+            "required": ["peak_rss_bytes", "avg_rss_bytes", "cpu_user_pct", "cpu_kernel_pct", "context_switches"],
+            "properties": {
+              "peak_rss_bytes": { "type": "integer" },
+              "avg_rss_bytes": { "type": "integer" },
+              "cpu_user_pct": { "type": "number" },
+              "cpu_kernel_pct": { "type": "number" },
+              "context_switches": { "type": "integer" }
+            }
+          },
+          "status_codes": {
+            "type": "object",
+            "required": ["http_2xx", "http_4xx", "http_5xx", "errors"],
+            "properties": {
+              "http_2xx": { "type": "integer" },
+              "http_4xx": { "type": "integer" },
+              "http_5xx": { "type": "integer" },
+              "errors": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

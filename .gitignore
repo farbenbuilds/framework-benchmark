@@ -1,0 +1,15 @@
+# Build artifacts
+/target/
+Cargo.lock
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Results cache
+results/raw/
+*.tmp
+
+# Environment
+.env
+.env.local
