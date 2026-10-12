@@ -25,6 +25,12 @@
       "skillPath": "skills/docker-patterns/SKILL.md",
       "computedHash": "2518afd6ae1e1b91d7f8d2f8d9b7145fb08ec640b9624e3dffc0a21289417245"
     },
+    "dod": {
+      "source": "cielixer/my-skills",
+      "sourceType": "github",
+      "skillPath": "dod/SKILL.md",
+      "computedHash": "cb00fa174a76d8b6a23fcd14054f7b9d6175dcae88517928488effaa246a9eb3"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
@@ -66,6 +72,12 @@
       "sourceType": "github",
       "skillPath": "skills/rust-best-practices/SKILL.md",
       "computedHash": "5f050929b5b62c8c847b75955d7d773be9dc649d03778e6e94cd8db1101fb674"
+    },
+    "separation-of-concerns": {
+      "source": "yanko-belov/code-craft",
+      "sourceType": "github",
+      "skillPath": "skills/separation-of-concerns/SKILL.md",
+      "computedHash": "4ce24611948f06da6718db465099c1ee6b18fff07791f8a7c50729e129813394"
     },
     "thermo-nuclear-code-quality-review": {
       "source": "cursor/plugins",

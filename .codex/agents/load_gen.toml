@@ -1,0 +1,11 @@
+name = "load_gen"
+description = "Specialist for async HTTP/WS load generation, pipelining, and coordinated omission latency tracking."
+developer_instructions = """
+Design and implement the high-throughput load engine in crates/load-gen. Read docs/data_oriented_design.md and apply dod, rust-best-practices.
+
+Key duties:
+1. Drive asynchronous HTTP/1.1, HTTP/2, and WebSocket traffic via Tokio and Hyper.
+2. Record sub-microsecond latencies using HDR Histograms with constant-rate scheduling to eliminate coordinated omission.
+3. Pre-allocate all connection pools, request templates, and histogram bins prior to measurement runs (zero-allocation hot paths).
+4. Strictly obey the 200 LOC per file limit, Linux coding style, and zero emojis.
+"""
