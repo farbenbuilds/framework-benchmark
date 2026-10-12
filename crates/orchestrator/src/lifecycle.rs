@@ -3,6 +3,7 @@ use common::manifest::FrameworkManifest;
 use common::result::{LibcVariant, MachineInfo, RunResult, TestMetrics};
 use load_gen::engine::execute_benchmark;
 use load_gen::plan::BenchmarkPlan;
+use std::path::Path;
 use std::time::Duration;
 
 pub async fn run_framework_test(
@@ -20,10 +21,12 @@ pub async fn run_framework_test(
         endpoint_path,
         concurrency,
         duration_secs,
+        None,
+        None,
     )
     .await?;
 
-    let result = RunResult {
+    Ok(RunResult {
         run_id: "test-run-1".into(),
         framework_name: manifest.framework.name.clone(),
         framework_version: manifest.framework.version.clone(),
@@ -31,9 +34,7 @@ pub async fn run_framework_test(
         timestamp_epoch_secs: 1_700_000_000,
         machine: default_machine_info(),
         benchmarks: vec![metrics],
-    };
-
-    Ok(result)
+    })
 }
 
 pub async fn run_framework_suite(
@@ -42,69 +43,36 @@ pub async fn run_framework_suite(
     concurrency: u32,
     duration_secs: u32,
     libc: LibcVariant,
+    target_pid: Option<u32>,
+    cgroup_dir: Option<&Path>,
 ) -> Result<RunResult, crate::error::OrchestratorError> {
     let mut benchmarks = Vec::new();
     let caps = &manifest.capabilities;
 
-    if caps.plaintext {
-        benchmarks.push(
-            execute_single_workload(
-                target_addr,
-                "plaintext",
-                "/plaintext",
-                concurrency,
-                duration_secs,
-            )
-            .await?,
-        );
-    }
-    if caps.json {
-        benchmarks.push(
-            execute_single_workload(target_addr, "json", "/json", concurrency, duration_secs)
+    let endpoints = [
+        (caps.plaintext, "plaintext", "/plaintext"),
+        (caps.json, "json", "/json"),
+        (caps.db_single, "db_single", "/db"),
+        (caps.db_multi, "db_multi", "/queries?queries=20"),
+        (caps.fortunes, "fortunes", "/fortunes"),
+        (caps.updates, "updates", "/updates?queries=20"),
+    ];
+
+    for (enabled, cat, path) in endpoints {
+        if enabled {
+            benchmarks.push(
+                execute_single_workload(
+                    target_addr,
+                    cat,
+                    path,
+                    concurrency,
+                    duration_secs,
+                    target_pid,
+                    cgroup_dir,
+                )
                 .await?,
-        );
-    }
-    if caps.db_single {
-        benchmarks.push(
-            execute_single_workload(target_addr, "db_single", "/db", concurrency, duration_secs)
-                .await?,
-        );
-    }
-    if caps.db_multi {
-        benchmarks.push(
-            execute_single_workload(
-                target_addr,
-                "db_multi",
-                "/queries?queries=20",
-                concurrency,
-                duration_secs,
-            )
-            .await?,
-        );
-    }
-    if caps.fortunes {
-        benchmarks.push(
-            execute_single_workload(
-                target_addr,
-                "fortunes",
-                "/fortunes",
-                concurrency,
-                duration_secs,
-            )
-            .await?,
-        );
-    }
-    if caps.updates {
-        benchmarks.push(
-            execute_single_workload(
-                target_addr,
-                "updates",
-                "/updates?queries=20",
-                concurrency,
-                duration_secs,
-            )
-            .await?,
-        );
+            );
+        }
     }
 
     Ok(RunResult {
@@ -124,6 +92,8 @@ async fn execute_single_workload(
     endpoint_path: &str,
     concurrency: u32,
     duration_secs: u32,
+    target_pid: Option<u32>,
+    cgroup_dir: Option<&Path>,
 ) -> Result<TestMetrics, crate::error::OrchestratorError> {
     let warmup_plan = BenchmarkPlan {
         target_addr: target_addr.to_string(),
@@ -135,7 +105,11 @@ async fn execute_single_workload(
     };
     let _ = execute_benchmark(warmup_plan).await?;
 
-    let sampler = BackgroundSampler::spawn_simulated(Duration::from_millis(50), 32 * 1024 * 1024);
+    let sampler = BackgroundSampler::spawn_target(
+        target_pid,
+        cgroup_dir.map(Path::to_path_buf),
+        Duration::from_millis(50),
+    );
 
     let measurement_plan = BenchmarkPlan {
         target_addr: target_addr.to_string(),
