@@ -44,8 +44,8 @@ else
 fi
 
 echo "[3/4] Checking for slop markers in source files..."
-# Exclude TODO.md from TODO marker check
-slop_matches=$(git ls-files '*.rs' '*.sh' '*.toml' '*.yml' '*.yaml' | grep -v '^TODO\.md$' | while read -r file; do
+# Exclude auditor scripts and TODO.md from slop pattern search
+slop_matches=$(git ls-files '*.rs' '*.sh' '*.toml' '*.yml' '*.yaml' | grep -v '^scripts/check_conventions\.' | while read -r file; do
     if [ -f "$file" ]; then
         if grep -nE '\b(FIXME|XXX|HACK)\b' "$file" >/dev/null 2>&1; then
             echo "$file"

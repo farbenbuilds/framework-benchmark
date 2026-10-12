@@ -29,8 +29,9 @@ To submit a new framework for benchmarking:
 
 ## 3. Pull Request and Verification Process
 Before submitting a pull request:
-1. Run `cargo fmt --check` across all crates.
-2. Run `cargo clippy --all-targets -- -D warnings`.
-3. Run `cargo test`.
-4. Run `sh scripts/check_conventions.sh` to ensure compliance with line limits, naming, and zero-emoji rules.
-5. Follow the [Commit Convention](COMMIT_CONVENTION.md) for all commit messages.
+1. Install and run pre-commit hooks: `pre-commit run --all-files`.
+2. Run `cargo fmt --check` across all crates.
+3. Run `cargo clippy --all-targets -- -D warnings`.
+4. Run `cargo test --workspace`.
+5. Run `sh scripts/check_conventions.sh` to ensure compliance with line limits, naming, and zero-emoji rules.
+6. Follow the [Commit Convention](COMMIT_CONVENTION.md) for all commit messages.
