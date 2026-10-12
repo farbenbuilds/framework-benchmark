@@ -26,7 +26,7 @@ fi
 
 echo "[2/4] Checking for files exceeding 200 lines..."
 # Exclude lockfiles and vendored agent skills
-long_files=$(git ls-files | grep -v '^\.agents/skills/' | grep -v 'skills-lock\.json$' | while read -r file; do
+long_files=$(git ls-files | grep -v '^\.agents/skills/' | grep -v 'skills-lock\.json$' | grep -v 'Cargo\.lock$' | while read -r file; do
     if [ -f "$file" ]; then
         lines=$(wc -l < "$file")
         if [ "$lines" -gt 200 ]; then

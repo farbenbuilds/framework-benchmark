@@ -21,7 +21,7 @@ if (-not $failed) {
 
 Write-Host "[2/4] Checking for files exceeding 200 lines..."
 foreach ($file in $files) {
-    if ($file -match 'skills-lock\.json$') { continue }
+    if ($file -match 'skills-lock\.json$' -or $file -match 'Cargo\.lock$') { continue }
     $lines = (Get-Content $file | Measure-Object -Line).Lines
     if ($lines -gt 200) {
         Write-Host "ERROR: $file exceeds 200 lines ($lines lines)" -ForegroundColor Red
