@@ -1,0 +1,7 @@
+FROM php:8.3-cli-alpine3.21
+RUN apk add --no-cache autoconf gcc g++ make linux-headers openssl-dev
+RUN pecl install swoole && docker-php-ext-enable swoole
+WORKDIR /app
+COPY server.php ./
+EXPOSE 8080
+ENTRYPOINT ["php", "server.php"]

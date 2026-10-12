@@ -1,0 +1,9 @@
+FROM php:8.3-cli-alpine3.21
+WORKDIR /app
+RUN apk add --no-cache git unzip
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+COPY composer.json ./
+RUN composer install --no-dev --optimize-autoloader
+COPY server.php ./
+EXPOSE 8080
+ENTRYPOINT ["php", "server.php", "start"]

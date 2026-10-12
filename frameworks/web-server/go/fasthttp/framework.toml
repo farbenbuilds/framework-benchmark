@@ -1,0 +1,31 @@
+[framework]
+name = "fasthttp"
+version = "1.58.0"
+language = "go"
+language_version = "1.23"
+website = "https://github.com/valyala/fasthttp"
+category = "web-server"
+tier = "micro"
+
+[capabilities]
+plaintext = true
+json = true
+db_single = false
+db_multi = false
+fortunes = false
+updates = false
+websocket = false
+http2 = false
+http3 = false
+
+[build]
+engine = "docker"
+
+[build.docker]
+dockerfile_glibc = "Dockerfile.glibc"
+dockerfile_musl = "Dockerfile.musl"
+
+[runtime]
+port = 8080
+healthcheck_path = "/healthz"
+startup_timeout_seconds = 10

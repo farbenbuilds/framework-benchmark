@@ -1,0 +1,31 @@
+[framework]
+name = "zix"
+version = "0.1.0"
+language = "zig"
+language_version = "0.13.0"
+website = "https://github.com/prothegee/zix"
+category = "web-server"
+tier = "micro"
+
+[capabilities]
+plaintext = true
+json = true
+db_single = false
+db_multi = false
+fortunes = false
+updates = false
+websocket = false
+http2 = false
+http3 = false
+
+[build]
+engine = "docker"
+
+[build.docker]
+dockerfile_glibc = "Dockerfile.glibc"
+dockerfile_musl = "Dockerfile.musl"
+
+[runtime]
+port = 8080
+healthcheck_path = "/healthz"
+startup_timeout_seconds = 10

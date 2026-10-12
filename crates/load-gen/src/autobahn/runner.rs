@@ -1,7 +1,9 @@
 use crate::autobahn::builder::FrameBuilder;
 use crate::autobahn::frame::{FrameOpcode, parse_frame_header};
 use crate::error::LoadGenError;
-use std::time::Duration;
+use crate::histogram::LatencyRecorder;
+use crate::stats::WorkerStats;
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -44,6 +46,36 @@ impl AutobahnSuiteRunner {
             }
         }
         Ok(false)
+    }
+
+    pub async fn run_echo_benchmark(
+        addr: &str,
+        path: &str,
+        deadline: Instant,
+        recorder: &mut LatencyRecorder,
+        stats: &mut WorkerStats,
+    ) -> Result<(), LoadGenError> {
+        let mut stream = TcpStream::connect(addr).await?;
+        let _ = stream.set_nodelay(true);
+        Self::perform_handshake(&mut stream, addr, path).await?;
+
+        let msg = "framework-benchmark-echo";
+        let mask = [0x12, 0x34, 0x56, 0x78];
+        let frame = FrameBuilder::build_text_message(msg, mask);
+        let mut buf = vec![0u8; 4096];
+
+        while Instant::now() < deadline {
+            let start = Instant::now();
+            stream.write_all(&frame).await?;
+            let n = stream.read(&mut buf).await?;
+            if n == 0 {
+                break;
+            }
+            let elapsed_us = start.elapsed().as_micros() as u64;
+            recorder.record_micros(elapsed_us);
+            stats.record_response(200, n);
+        }
+        Ok(())
     }
 
     pub async fn test_fuzz_rejection(

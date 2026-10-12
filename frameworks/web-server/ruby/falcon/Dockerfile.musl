@@ -1,0 +1,8 @@
+FROM ruby:3.3-alpine3.21
+WORKDIR /app
+RUN apk add --no-cache build-base
+COPY Gemfile ./
+RUN bundle install
+COPY config.ru ./
+EXPOSE 8080
+ENTRYPOINT ["falcon", "serve", "--bind", "http://0.0.0.0:8080"]

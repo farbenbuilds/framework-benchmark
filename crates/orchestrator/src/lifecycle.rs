@@ -75,6 +75,20 @@ pub async fn run_framework_suite(
         }
     }
 
+    if caps.websocket {
+        benchmarks.push(
+            crate::ws_bench::execute_websocket_workload(
+                target_addr,
+                "/ws",
+                concurrency,
+                duration_secs,
+                target_pid,
+                cgroup_dir,
+            )
+            .await?,
+        );
+    }
+
     Ok(RunResult {
         run_id: format!("{}-suite", manifest.framework.name),
         framework_name: manifest.framework.name.clone(),

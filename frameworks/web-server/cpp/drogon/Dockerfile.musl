@@ -1,0 +1,11 @@
+FROM alpine:3.21 AS build
+WORKDIR /src
+RUN apk add --no-cache cmake make g++
+COPY CMakeLists.txt main.cpp ./
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+
+FROM alpine:3.21
+WORKDIR /app
+COPY --from=build /src/build/server /app/server
+EXPOSE 8080
+ENTRYPOINT ["/app/server"]

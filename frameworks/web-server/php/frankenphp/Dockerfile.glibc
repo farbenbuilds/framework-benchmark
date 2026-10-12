@@ -1,0 +1,6 @@
+FROM dunglas/frankenphp:latest-bookworm
+WORKDIR /app
+COPY server.php /app/index.php
+EXPOSE 8080
+ENV SERVER_NAME=":8080"
+ENTRYPOINT ["frankenphp", "php-server", "--listen", ":8080", "--root", "/app"]

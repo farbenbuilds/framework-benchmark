@@ -1,0 +1,5 @@
+FROM oven/bun:1.2-slim
+WORKDIR /app
+COPY package.json server.ts ./
+EXPOSE 8080
+ENTRYPOINT ["bun", "run", "server.ts"]
