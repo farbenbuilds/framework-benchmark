@@ -16,6 +16,7 @@ This document defines the unified workflow integrating the specialized skills in
 - **Zero Emojis**: Emojis are strictly banned from all source code, documentation, comments, commit messages, and benchmark output reports.
 - **Minimal "Why" Comments**: Never describe what the code does. If an approach is non-obvious, explain the rationale in exactly 1 line (maximum 2 lines).
 - **Simplicity and Density (`ponytail`, `caveman`)**: Write the minimum code required to fulfill the contract. Deliver high signal-to-noise communication in plans and reports.
+- **Live Documentation Lookup (`context7`)**: Retrieve current documentation and API specifications directly via Context7 when implementing framework adapters and low-level interfaces.
 
 ## 2. Core Architecture
 - **Rust Benchmark Engine (`rust-best-practices`)**: Low-overhead asynchronous engine leveraging Tokio and Hyper with zero allocation on measurement hot paths.

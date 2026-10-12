@@ -19,6 +19,12 @@
       "skillPath": "skills/caveman/SKILL.md",
       "computedHash": "71b600c88c8d1d36f18c4875db23b53c5d6cb9ba3195e19451d6b1bb67db07c4"
     },
+    "context7": {
+      "source": "intellectronica/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/context7/SKILL.md",
+      "computedHash": "4e1e101b21c5be62420caffed99a5c11281ff48bfd208411b8714a14f8c82eab"
+    },
     "docker-patterns": {
       "source": "affaan-m/ecc",
       "sourceType": "github",

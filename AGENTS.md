@@ -51,3 +51,4 @@ Antigravity, OpenCode, and Codex operate using a shared 4-role team workflow sup
 Load skills on demand from `.agents/skills/<name>/SKILL.md`:
 - Architecture & Patterns: `dod`, `separation-of-concerns`, `pragmatic-programmer`, `Pragmatic Functional Programming`, `ponytail`, `caveman`.
 - Systems & Runtimes: `rust-best-practices`, `docker-patterns`, `nix-best-practices`, `github-actions`.
+- Documentation & APIs: `context7` (real-time documentation and code examples for libraries and frameworks).
