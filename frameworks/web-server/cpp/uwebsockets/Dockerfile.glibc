@@ -1,11 +1,17 @@
 FROM debian:bookworm-slim AS build
 WORKDIR /src
-RUN apt-get update -qq && apt-get install -y --no-install-recommends cmake make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    cmake g++ git make && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch v20.69.0 --recurse-submodules \
+    https://github.com/uNetworking/uWebSockets.git /opt/uwebsockets && \
+    make -C /opt/uwebsockets/uSockets
 COPY CMakeLists.txt main.cpp ./
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel
 
 FROM debian:bookworm-slim
 WORKDIR /app
-COPY --from=build /src/build/server /app/server
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    libstdc++6 && rm -rf /var/lib/apt/lists/*
+COPY --from=build /src/build/server ./server
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]

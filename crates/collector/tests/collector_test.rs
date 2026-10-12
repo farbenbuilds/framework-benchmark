@@ -1,6 +1,10 @@
 use collector::aggregator::HarvestAggregator;
 use collector::cgroups::{parse_cgroup_cpu_stat, parse_cgroup_memory_stat};
 use collector::procfs::{parse_statm, parse_status_switches};
+use collector::{
+    EbpfMetrics, PerfMode, energy_delta_uj, page_cache_hit_ratio, parse_ebpf_metrics,
+    parse_perf_event_paranoid, select_perf_mode,
+};
 
 #[test]
 fn test_parse_procfs_statm() {
@@ -45,4 +49,25 @@ fn test_harvest_aggregator_metrics() {
     assert_eq!(res.avg_rss_bytes, 20_000_000);
     assert!((res.cpu_user_pct - 65.0).abs() < f32::EPSILON);
     assert_eq!(res.context_switches, 2000);
+}
+
+#[test]
+fn test_energy_counter_wrap() {
+    assert_eq!(energy_delta_uj(90, 20, 100), 30);
+    assert_eq!(energy_delta_uj(20, 90, 100), 70);
+}
+
+#[test]
+fn test_perf_fallback_selection() {
+    assert_eq!(parse_perf_event_paranoid("2\n"), Some(2));
+    assert_eq!(select_perf_mode(Some(2), false), PerfMode::SoftwareFallback);
+    assert_eq!(select_perf_mode(Some(3), true), PerfMode::Hardware);
+}
+
+#[test]
+fn test_ebpf_metric_parsing() {
+    let metrics = parse_ebpf_metrics("off_cpu_usec 10\npage_cache_hits 4\npage_cache_misses 1\n");
+    assert_eq!(metrics.off_cpu_usec, 10);
+    assert_eq!(page_cache_hit_ratio(metrics), Some(0.8));
+    assert_eq!(page_cache_hit_ratio(EbpfMetrics::default()), None);
 }

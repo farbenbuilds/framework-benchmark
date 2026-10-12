@@ -39,6 +39,8 @@ pub struct ResourceUsage {
     pub cpu_user_pct: f32,
     pub cpu_kernel_pct: f32,
     pub context_switches: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rapl_joules: Option<f64>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

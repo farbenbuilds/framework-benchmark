@@ -90,7 +90,7 @@ pub async fn run_framework_suite(
     }
 
     Ok(RunResult {
-        run_id: format!("{}-suite", manifest.framework.name),
+        run_id: format!("{}-{libc:?}-suite", manifest.framework.name).to_lowercase(),
         framework_name: manifest.framework.name.clone(),
         framework_version: manifest.framework.version.clone(),
         libc,
@@ -119,11 +119,8 @@ async fn execute_single_workload(
     };
     let _ = execute_benchmark(warmup_plan).await?;
 
-    let sampler = BackgroundSampler::spawn_target(
-        target_pid,
-        cgroup_dir.map(Path::to_path_buf),
-        Duration::from_millis(50),
-    );
+    let sampler =
+        BackgroundSampler::spawn_target(target_pid, cgroup_dir, Duration::from_millis(50));
 
     let measurement_plan = BenchmarkPlan {
         target_addr: target_addr.to_string(),

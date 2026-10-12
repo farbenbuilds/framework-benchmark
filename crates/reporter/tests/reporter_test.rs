@@ -48,6 +48,7 @@ fn create_dummy_run(name: &str, libc: LibcVariant, rps: f64, p99_us: u64) -> Run
                 cpu_user_pct: 70.0,
                 cpu_kernel_pct: 10.0,
                 context_switches: 1000,
+                rapl_joules: None,
             },
             status_codes: StatusCodeCounts::default(),
         }],

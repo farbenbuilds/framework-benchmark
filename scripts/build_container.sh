@@ -9,6 +9,7 @@ fi
 CONTEXT_DIR="$1"
 TAG="$2"
 TARGET_LIBC="${3:-glibc}"
+CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 
 DOCKERFILE="${CONTEXT_DIR}/Dockerfile.${TARGET_LIBC}"
 
@@ -17,9 +18,14 @@ if [ ! -f "$DOCKERFILE" ]; then
     exit 1
 fi
 
-echo "Building Docker image: ${TAG} (${TARGET_LIBC}) without cache drift..."
+if ! command -v "$CONTAINER_RUNTIME" >/dev/null 2>&1; then
+    echo "Container runtime not found: $CONTAINER_RUNTIME" >&2
+    exit 1
+fi
 
-docker build \
+echo "Building container image: ${TAG} (${TARGET_LIBC}) without cache drift..."
+
+"$CONTAINER_RUNTIME" build \
     --no-cache \
     --pull \
     --tag "${TAG}" \

@@ -5,9 +5,11 @@ pub mod poller;
 pub mod runner;
 pub mod ws_bench;
 
+pub use container::{ContainerTarget, start_container, stop_container};
 pub use discovery::discover_frameworks;
 pub use error::OrchestratorError;
 pub use lifecycle::{run_framework_suite, run_framework_test};
 pub use poller::wait_for_ready;
 pub use runner::{BenchmarkSessionConfig, execute_framework_session};
 pub use ws_bench::execute_websocket_workload;
+pub mod container;

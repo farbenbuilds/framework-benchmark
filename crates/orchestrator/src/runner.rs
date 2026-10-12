@@ -1,6 +1,7 @@
 use crate::error::OrchestratorError;
 use crate::lifecycle::run_framework_suite;
 use crate::poller::wait_for_ready;
+use crate::{start_container, stop_container};
 use common::manifest::FrameworkManifest;
 use common::result::{LibcVariant, RunResult};
 use reporter::archive::write_result_json;
@@ -21,6 +22,7 @@ pub struct BenchmarkSessionConfig {
     pub readme_path: Option<String>,
     pub target_pid: Option<u32>,
     pub cgroup_dir: Option<PathBuf>,
+    pub manage_container: bool,
 }
 
 impl Default for BenchmarkSessionConfig {
@@ -34,41 +36,55 @@ impl Default for BenchmarkSessionConfig {
             readme_path: Some("README.md".into()),
             target_pid: None,
             cgroup_dir: None,
+            manage_container: true,
         }
     }
 }
 
 pub async fn execute_framework_session(
+    framework_dir: &Path,
     manifest: &FrameworkManifest,
     config: &BenchmarkSessionConfig,
 ) -> Result<RunResult, OrchestratorError> {
+    let target = if config.manage_container {
+        Some(start_container(framework_dir, manifest, config.libc)?)
+    } else {
+        None
+    };
     let port = manifest.runtime.port;
     let target_addr = format!("{}:{}", config.target_host, port);
 
-    wait_for_ready(
-        &target_addr,
-        &manifest.runtime.healthcheck_path,
-        manifest.runtime.startup_timeout_seconds,
-    )
-    .await?;
-
-    let result = run_framework_suite(
-        manifest,
-        &target_addr,
-        config.concurrency,
-        config.duration_secs,
-        config.libc,
-        config.target_pid,
-        config.cgroup_dir.as_deref(),
-    )
-    .await?;
-
-    persist_session_results(&result, &config.output_dir)?;
-    if let Some(readme) = &config.readme_path {
-        let _ = update_readme_leaderboard(Path::new(readme), std::slice::from_ref(&result));
+    let result = async {
+        wait_for_ready(
+            &target_addr,
+            &manifest.runtime.healthcheck_path,
+            manifest.runtime.startup_timeout_seconds,
+        )
+        .await?;
+        let target_pid = target
+            .as_ref()
+            .map_or(config.target_pid, |target| Some(target.pid));
+        let result = run_framework_suite(
+            manifest,
+            &target_addr,
+            config.concurrency,
+            config.duration_secs,
+            config.libc,
+            target_pid,
+            config.cgroup_dir.as_deref(),
+        )
+        .await?;
+        persist_session_results(&result, &config.output_dir)?;
+        if let Some(readme) = &config.readme_path {
+            let _ = update_readme_leaderboard(Path::new(readme), std::slice::from_ref(&result));
+        }
+        Ok(result)
     }
-
-    Ok(result)
+    .await;
+    if let Some(target) = &target {
+        stop_container(framework_dir, target);
+    }
+    result
 }
 
 fn persist_session_results(result: &RunResult, base_dir: &str) -> Result<(), OrchestratorError> {

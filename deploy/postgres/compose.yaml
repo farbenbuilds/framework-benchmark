@@ -1,0 +1,24 @@
+name: framework-benchmark-postgres
+
+services:
+  postgres:
+    image: postgres:17.4-alpine3.21
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hello_world}
+      POSTGRES_USER: ${POSTGRES_USER:-benchmarkdbuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-benchmarkdbpass}
+    ports:
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./seed.sql:/docker-entrypoint-initdb.d/01_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:

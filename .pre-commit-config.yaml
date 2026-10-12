@@ -26,7 +26,7 @@ repos:
     hooks:
       - id: convention-audit
         name: check repository conventions
-        entry: pwsh -File scripts/check_conventions.ps1
+        entry: sh scripts/check_conventions.sh
         language: system
         pass_filenames: false
         always_run: true

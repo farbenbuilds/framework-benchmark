@@ -37,3 +37,14 @@ fn test_fuzz_generators() {
     let frag_ping = FuzzInjector::create_fragmented_ping();
     assert_eq!(frag_ping[0] & 0x80, 0);
 }
+
+#[test]
+fn test_fragmentation_boundaries() {
+    let data = vec![7; 64 * 1024];
+    let frames =
+        FrameBuilder::build_fragmented_binary(&data, &[64, 125, 126, 1024, 16384, 65536], [1; 4]);
+    assert_eq!(frames.len(), 6);
+    assert_eq!(frames[0][0] & 0x0f, FrameOpcode::Binary as u8);
+    assert_eq!(frames[1][0] & 0x0f, FrameOpcode::Continuation as u8);
+    assert_ne!(frames.last().unwrap()[0] & 0x80, 0);
+}
