@@ -18,6 +18,16 @@ impl LatencyRecorder {
         let _ = self.histogram.record(val);
     }
 
+    #[inline]
+    pub fn record_micros_corrected(&mut self, micros: u64, expected_interval_us: u64) {
+        let val = micros.clamp(1, 100_000_000);
+        if expected_interval_us > 0 {
+            let _ = self.histogram.record_correct(val, expected_interval_us);
+        } else {
+            let _ = self.histogram.record(val);
+        }
+    }
+
     pub fn combine(&mut self, other: &Self) {
         let _ = self.histogram.add(&other.histogram);
     }

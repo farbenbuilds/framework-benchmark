@@ -9,7 +9,7 @@ use reporter::index::update_historical_index;
 use reporter::logic::aggregate_leaderboard;
 use reporter::markdown::{render_markdown_table, update_readme_leaderboard};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct BenchmarkSessionConfig {
@@ -19,6 +19,8 @@ pub struct BenchmarkSessionConfig {
     pub libc: LibcVariant,
     pub output_dir: String,
     pub readme_path: Option<String>,
+    pub target_pid: Option<u32>,
+    pub cgroup_dir: Option<PathBuf>,
 }
 
 impl Default for BenchmarkSessionConfig {
@@ -30,6 +32,8 @@ impl Default for BenchmarkSessionConfig {
             libc: LibcVariant::Glibc,
             output_dir: "results".into(),
             readme_path: Some("README.md".into()),
+            target_pid: None,
+            cgroup_dir: None,
         }
     }
 }
@@ -54,6 +58,8 @@ pub async fn execute_framework_session(
         config.concurrency,
         config.duration_secs,
         config.libc,
+        config.target_pid,
+        config.cgroup_dir.as_deref(),
     )
     .await?;
 

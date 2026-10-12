@@ -17,6 +17,16 @@ fn test_latency_recorder_quantiles() {
 }
 
 #[test]
+fn test_latency_recorder_coordinated_omission() {
+    let mut recorder = LatencyRecorder::default();
+    recorder.record_micros_corrected(10_000, 1_000);
+
+    let dist = recorder.export_distribution();
+    assert!(dist.min_us <= 1_000);
+    assert!(dist.max_us >= 10_000);
+}
+
+#[test]
 fn test_worker_stats_aggregation() {
     let mut stats1 = WorkerStats::default();
     stats1.record_response(200, 100);

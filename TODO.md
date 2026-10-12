@@ -22,7 +22,12 @@ The project evaluates HTTP and WebSocket server and client frameworks across lan
    - Asynchronous background resource sampling during live measurements (`BackgroundSampler`).
    - Capability-driven multi-workload execution across endpoints (`run_framework_suite`).
    - In-place dynamic `README.md` benchmark leaderboard updater (`update_readme_leaderboard`).
-8. **Verification & Acceptance Criteria**: [docs/roadmap/acceptance_criteria.md](docs/roadmap/acceptance_criteria.md)
+8. **Measurement Accuracy & Boundary Hardening**: [Completed]
+   - HDR Histogram coordinated omission compensation (`record_micros_corrected`).
+   - Worker connection resilience with zero concurrency drop on socket closure.
+   - High-precision wall-clock measurement duration for exact RPS calculation.
+   - Dual-source telemetry sampling (`/proc` and cgroups v2) integrated into orchestrator runner.
+9. **Verification & Acceptance Criteria**: [docs/roadmap/acceptance_criteria.md](docs/roadmap/acceptance_criteria.md)
    - Quality gates, 200 LOC ceiling, zero emojis, zero-allocation hot paths, and reproducibility.
 
 ## Core Rules for Agents and Developers

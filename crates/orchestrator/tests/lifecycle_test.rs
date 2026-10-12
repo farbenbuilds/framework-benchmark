@@ -27,14 +27,14 @@ async fn test_lifecycle_suite_execution() {
     });
 
     let manifest_toml = format!(
-        r#"
+        r"
 [framework]
-name = "mock"
-version = "0.1"
-language = "rust"
-language_version = "1.85"
-category = "web-server"
-tier = "micro"
+name = 'mock'
+version = '0.1'
+language = 'rust'
+language_version = '1.85'
+category = 'web-server'
+tier = 'micro'
 
 [capabilities]
 plaintext = true
@@ -48,24 +48,32 @@ http2 = false
 http3 = false
 
 [build]
-engine = "docker"
+engine = 'docker'
 
 [build.docker]
-dockerfile_glibc = "Dockerfile.glibc"
-dockerfile_musl = "Dockerfile.musl"
+dockerfile_glibc = 'Dockerfile.glibc'
+dockerfile_musl = 'Dockerfile.musl'
 
 [runtime]
 port = {}
-healthcheck_path = "/healthz"
+healthcheck_path = '/healthz'
 startup_timeout_seconds = 2
-"#,
+",
         addr.port()
     );
 
     let manifest = parse_manifest(&manifest_toml).unwrap();
-    let result = run_framework_suite(&manifest, &addr.to_string(), 4, 1, LibcVariant::Glibc)
-        .await
-        .unwrap();
+    let result = run_framework_suite(
+        &manifest,
+        &addr.to_string(),
+        4,
+        1,
+        LibcVariant::Glibc,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(result.framework_name, "mock");
     assert_eq!(result.benchmarks.len(), 1);
