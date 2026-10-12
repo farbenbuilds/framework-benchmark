@@ -18,5 +18,6 @@ Phase 5 automates host tuning, bare-metal runner scheduling, and GitHub pull req
 - [x] Test execution (`cargo test --workspace`).
 
 ### 5.3 Automated Benchmark Runner Lifecycle
-- [ ] Configure GitHub repository dispatch trigger or cron job for scheduled benchmark runs on the bare-metal machine.
-- [ ] Implement runner orchestrator execution script updating `results/` artifacts.
+- [x] Configure GitHub Actions workflow for scheduled and manual benchmark runs (`.github/workflows/benchmark.yml`).
+- [x] Implement runner orchestrator execution script (`scripts/run_benchmarks.sh`) and CLI (`crates/orchestrator/src/main.rs`).
+- [x] Maintain automated output generation for Markdown tables and SVG charts under `results/`.

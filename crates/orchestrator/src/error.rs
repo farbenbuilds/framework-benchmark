@@ -11,6 +11,9 @@ pub enum OrchestratorError {
     #[error("load generator error: {0}")]
     LoadGen(#[from] load_gen::LoadGenError),
 
+    #[error("reporter error: {0}")]
+    Reporter(#[from] reporter::ReporterError),
+
     #[error("readiness timeout: service failed to respond within {0} seconds")]
     ReadinessTimeout(u64),
 
