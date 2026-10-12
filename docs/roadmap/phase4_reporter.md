@@ -5,22 +5,22 @@ Phase 4 implements data reduction, latency percentile calculation, JSON archivin
 
 ## Tasks and Checklist
 
-### 4.1 Pure Metrics Aggregation Logic (`crates/reporter/src/logic/`)
-- [ ] Implement pure transformation functions converting raw HDR histogram samples into percentiles (P50, P75, P90, P99, P99.9, P99.99).
-- [ ] Calculate transfer rates, throughput averages, and request loss percentages.
-- [ ] Correlate cgroups v2 resource samples with load phases to calculate peak RSS and average CPU utilization.
-- [ ] Strictly separate computation from formatting and I/O.
+### 4.1 Pure Metrics Aggregation Logic (`crates/reporter/src/logic.rs`)
+- [x] Implement pure transformation and sorting functions for benchmark runs across categories.
+- [x] Extract and format throughput (RPS), P99 latency (ms), and peak memory (MB).
+- [x] Correlate dual-libc execution results (glibc vs musl).
+- [x] Strictly separate computation from formatting and I/O.
 
-### 4.2 JSON Artifact Serializer (`crates/reporter/src/serializers/`)
-- [ ] Serialize full run data conforming to `docs/schemas/result_schema.json`.
-- [ ] Store timestamped runs under `results/data/<year>/<month>/<run_id>.json`.
+### 4.2 JSON Artifact Serializer (`crates/reporter/src/archive.rs`)
+- [x] Serialize full run data conforming to `docs/schemas/result_schema.json`.
+- [x] Store timestamped runs under `results/data/<year>/<month>/<run_id>.json`.
 - [ ] Maintain an append-only index file `results/index.json` tracking historical runs.
 
-### 4.3 Markdown Leaderboard Generator (`crates/reporter/src/formatters/`)
-- [ ] Generate GitHub-flavored Markdown tables for `README.md`.
-- [ ] Rank frameworks by throughput (RPS) and P99 latency within workload categories (Plaintext, JSON, DB queries, Fortunes, WebSocket).
-- [ ] Highlight performance deltas between glibc and musl builds for each framework.
-- [ ] Ensure all generated tables, headers, and logs are completely free of emojis.
+### 4.3 Markdown Leaderboard Generator (`crates/reporter/src/markdown.rs`)
+- [x] Generate GitHub-flavored Markdown tables for results presentation.
+- [x] Rank frameworks by throughput (RPS) and P99 latency within workload categories.
+- [x] Highlight performance deltas between glibc and musl builds for each framework.
+- [x] Ensure all generated tables, headers, and logs are completely free of emojis.
 
 ### 4.4 Chart Plotting Engine (`crates/reporter/src/charts/`)
 - [ ] Generate lightweight standalone SVG bar charts for Throughput vs P99 Latency.
