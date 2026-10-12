@@ -1,0 +1,51 @@
+name: Feature Request
+description: Propose a new framework implementation, workload category, engine enhancement, or metric collector
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        Thank you for suggesting an enhancement to **Framework Benchmark**.
+
+        *Please note that new framework contributions should adhere to the standards outlined in `TODO.md` and support containerized/reproducible execution (Docker and/or Nix).*
+  - type: input
+    id: feature-description
+    attributes:
+      label: Feature Description
+      description: A short description of the framework, workload, or feature you are proposing.
+      placeholder: E.g. Add support for WebSocket broadcast / latency benchmarking category.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation/Purpose
+      description: Why should this be added? Which languages, runtimes, or benchmark scenarios benefit from this?
+      placeholder: E.g. Enables evaluating real-time pub/sub throughput across Socket.IO, uWebSockets, and Actix Web...
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-specification
+    attributes:
+      label: Proposed Specification / Architecture
+      description: How should this be implemented? Does it require changes to `framework.toml`, `load-generator`, or `collector`?
+      placeholder: E.g. Define `/ws-echo` endpoint contract, sample round-trip message frames, and aggregate P99 latency...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Are there existing tools or workload classifications that could address this?
+      placeholder: E.g. Using an external wrk2 script instead of native Rust engine...
+    validations:
+      required: false
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Links to upstream framework repositories, TechEmpower references, or architectural notes.
+      placeholder: E.g. Reference implementation in https://github.com/...
+    validations:
+      required: false
