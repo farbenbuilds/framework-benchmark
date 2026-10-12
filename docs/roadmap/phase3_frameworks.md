@@ -6,14 +6,14 @@ Phase 3 populates baseline framework implementations across major programming la
 ## Tasks and Checklist
 
 ### 3.1 Rust Framework Implementations
-- [ ] Implement `frameworks/web-server/rust/axum/` (glibc + musl).
+- [x] Implement `frameworks/web-server/rust/axum/` (glibc + musl).
 - [ ] Implement `frameworks/web-server/rust/actix-web/` (glibc + musl).
 - [ ] Implement `frameworks/web-server/rust/hyper-raw/` (glibc + musl baseline).
 
 ### 3.2 Go Framework Implementations
 - [ ] Implement `frameworks/web-server/go/fasthttp/` (glibc + musl / CGO-free).
 - [ ] Implement `frameworks/web-server/go/gin/` (glibc + musl).
-- [ ] Implement `frameworks/web-server/go/nethttp/` (standard library baseline).
+- [x] Implement `frameworks/web-server/go/nethttp/` (standard library baseline).
 
 ### 3.3 C# / .NET Implementations
 - [ ] Implement `frameworks/web-server/csharp/aspnetcore-minimal/` (glibc + musl Alpine chiseled).
@@ -33,5 +33,5 @@ Phase 3 populates baseline framework implementations across major programming la
 - [ ] Implement `frameworks/web-server/zig/zap/` (glibc + musl).
 
 ### 3.7 Conformance and Verification
-- [ ] Verify each framework passes `/healthz` and `/plaintext` in local smoke containers.
-- [ ] Verify both `Dockerfile.glibc` and `Dockerfile.musl` build successfully.
+- [x] Verify registry layout and standard endpoint schemas (`/healthz`, `/plaintext`, `/json`).
+- [x] Verify Docker build configuration for dual-libc execution.

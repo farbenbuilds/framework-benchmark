@@ -307,6 +307,9 @@ name = "reporter"
 version = "0.1.0"
 dependencies = [
  "common",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]
