@@ -22,6 +22,7 @@ pub struct BenchmarkSessionConfig {
     pub readme_path: Option<String>,
     pub target_pid: Option<u32>,
     pub cgroup_dir: Option<PathBuf>,
+    pub database_url: Option<String>,
     pub manage_container: bool,
 }
 
@@ -30,12 +31,13 @@ impl Default for BenchmarkSessionConfig {
         Self {
             target_host: "127.0.0.1".into(),
             concurrency: 64,
-            duration_secs: 15,
+            duration_secs: 30,
             libc: LibcVariant::Glibc,
             output_dir: "results".into(),
             readme_path: Some("README.md".into()),
             target_pid: None,
             cgroup_dir: None,
+            database_url: None,
             manage_container: true,
         }
     }
@@ -47,7 +49,12 @@ pub async fn execute_framework_session(
     config: &BenchmarkSessionConfig,
 ) -> Result<RunResult, OrchestratorError> {
     let target = if config.manage_container {
-        Some(start_container(framework_dir, manifest, config.libc)?)
+        Some(start_container(
+            framework_dir,
+            manifest,
+            config.libc,
+            config.database_url.as_deref(),
+        )?)
     } else {
         None
     };

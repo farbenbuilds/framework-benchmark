@@ -24,6 +24,7 @@ async fn main() -> Result<(), OrchestratorError> {
     println!("==> Discovered {} framework targets.", frameworks.len());
     let config = BenchmarkSessionConfig {
         output_dir: output_dir.to_string(),
+        database_url: env::var("DATABASE_URL").ok(),
         manage_container: env::var("BENCHMARK_MANAGE_CONTAINER").map_or(true, |value| value != "0"),
         ..BenchmarkSessionConfig::default()
     };

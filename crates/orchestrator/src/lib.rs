@@ -1,6 +1,7 @@
 pub mod discovery;
 pub mod error;
 pub mod lifecycle;
+pub mod machine;
 pub mod poller;
 pub mod runner;
 pub mod ws_bench;

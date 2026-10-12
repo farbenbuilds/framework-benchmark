@@ -1,6 +1,6 @@
 [framework]
 name = "cadente"
-version = "1.0.0"
+version = "1.6.2-beta12"
 language = "csharp"
 language_version = ".net 9"
 website = "https://github.com/sisk-http/core"

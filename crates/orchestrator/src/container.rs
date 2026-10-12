@@ -15,6 +15,7 @@ pub fn start_container(
     framework_dir: &Path,
     manifest: &FrameworkManifest,
     libc: LibcVariant,
+    database_url: Option<&str>,
 ) -> Result<ContainerTarget, OrchestratorError> {
     let docker =
         manifest.build.docker.as_ref().ok_or_else(|| {
@@ -39,24 +40,26 @@ pub fn start_container(
 
     run_docker(
         framework_dir,
-        ["build", "--file", dockerfile, "--tag", &image, "."],
+        &["build", "--file", dockerfile, "--tag", &image, "."],
     )?;
-    let output = run_docker(
-        framework_dir,
-        [
-            "run",
-            "--detach",
-            "--name",
-            &name,
-            "--label",
-            "framework-benchmark.managed=true",
-            "--publish",
-            "8080:8080",
-            &image,
-        ],
-    )?;
+    let mut args = vec![
+        "run".into(),
+        "--detach".into(),
+        "--name".into(),
+        name.clone(),
+        "--label".into(),
+        "framework-benchmark.managed=true".into(),
+        "--network".into(),
+        "host".into(),
+    ];
+    if let Some(database_url) = database_url {
+        args.push("--env".into());
+        args.push(format!("DATABASE_URL={database_url}"));
+    }
+    args.push(image);
+    let output = run_docker(framework_dir, &args)?;
     let id = output.trim();
-    let pid = run_docker(framework_dir, ["inspect", "--format={{.State.Pid}}", id])?
+    let pid = run_docker(framework_dir, &["inspect", "--format={{.State.Pid}}", id])?
         .trim()
         .parse()
         .map_err(|error| OrchestratorError::Process(format!("invalid container pid: {error}")))?;
@@ -64,12 +67,12 @@ pub fn start_container(
 }
 
 pub fn stop_container(framework_dir: &Path, target: &ContainerTarget) {
-    let _ = run_docker(framework_dir, ["rm", "--force", &target.name]);
+    let _ = run_docker(framework_dir, &["rm", "--force", &target.name]);
 }
 
-fn run_docker<const N: usize>(cwd: &Path, args: [&str; N]) -> Result<String, OrchestratorError> {
+fn run_docker<S: AsRef<str>>(cwd: &Path, args: &[S]) -> Result<String, OrchestratorError> {
     let output = Command::new("docker")
-        .args(args)
+        .args(args.iter().map(AsRef::as_ref))
         .current_dir(cwd)
         .output()?;
     if output.status.success() {

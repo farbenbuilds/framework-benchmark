@@ -1,8 +1,22 @@
-var builder = WebApplication.CreateBuilder(args);
-var app = builder.Build();
+using System.Text;
+using Sisk.Cadente.CoreEngine;
+using Sisk.Core.Http;
 
-app.MapGet("/healthz", () => Results.Ok());
-app.MapGet("/plaintext", () => Results.Text("Hello, World!", "text/plain; charset=utf-8"));
-app.MapGet("/json", () => Results.Json(new { message = "Hello, World!" }));
+using var app = HttpServer.CreateBuilder()
+    .UseEngine(new CadenteHttpServerEngine())
+    .UseListeningPort("http://0.0.0.0:8080/")
+    .UseMinimalConfiguration()
+    .UseRouter(router =>
+    {
+        router.MapGet("/healthz", _ => new HttpResponse());
+        router.MapGet("/plaintext", _ => Response("Hello, World!", "text/plain; charset=utf-8"));
+        router.MapGet("/json", _ => Response("{\"message\":\"Hello, World!\"}", "application/json"));
+    })
+    .Build();
 
-app.Run("http://0.0.0.0:8080");
+app.Start(verbose: false);
+
+static HttpResponse Response(string body, string content_type) => new()
+{
+    Content = new StringContent(body, Encoding.UTF8, content_type),
+};
