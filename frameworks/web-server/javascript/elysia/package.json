@@ -1,0 +1,12 @@
+{
+  "name": "elysia-benchmark",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "elysia": "^1.2.0"
+  },
+  "scripts": {
+    "start": "bun run server.ts"
+  }
+}

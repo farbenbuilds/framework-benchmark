@@ -4,4 +4,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="GenHTTP.Core" Version="9.5.0" />
+    <PackageReference Include="GenHTTP.Modules.Practices" Version="9.5.0" />
+  </ItemGroup>
 </Project>

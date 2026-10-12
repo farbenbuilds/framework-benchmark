@@ -1,6 +1,7 @@
-FROM alpine:3.21 AS base
+FROM oven/bun:1.2-alpine
 WORKDIR /app
-RUN apk add --no-cache ca-certificates curl
-COPY . /app
+COPY package.json ./
+RUN bun install --production
+COPY server.ts ./
 EXPOSE 8080
-ENTRYPOINT ["/app/server"]
+ENTRYPOINT ["bun", "run", "server.ts"]

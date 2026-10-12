@@ -1,0 +1,2 @@
+blacksheep>=2.0.7
+uvicorn>=0.34.0
