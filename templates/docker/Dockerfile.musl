@@ -1,0 +1,8 @@
+FROM alpine:3.21 AS base
+WORKDIR /app
+RUN apk add --no-cache ca-certificates curl
+
+FROM base AS runner
+WORKDIR /app
+EXPOSE 8080
+ENTRYPOINT ["/app/server"]
