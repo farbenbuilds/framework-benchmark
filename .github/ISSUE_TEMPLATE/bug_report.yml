@@ -1,0 +1,68 @@
+name: Bug Report
+description: Submit a bug report, metric calculation error, runner failure, or build issue for Framework Benchmark
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+        Thank you for reporting an issue in **Framework Benchmark**.
+        Do not disclose security vulnerabilities publicly. Follow `SECURITY.md` and email the maintainers privately.
+  - type: input
+    id: bug-description
+    attributes:
+      label: Bug Description
+      description: A concise description of the bug.
+      placeholder: E.g. Load generator panics on connection reset under C64K concurrency tier.
+    validations:
+      required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this? Please specify framework, workload category, flags, or configuration.
+      placeholder: |
+        1. Run `cargo run -p orchestrator -- --framework axum --category plaintext --concurrency 65536`
+        2. Observe runner process terminating prematurely
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: E.g. The runner should complete the warmup phase, sample metrics, and record HDR histogram percentiles.
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: E.g. The orchestrator crashed with socket allocation exhaustion error.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment & Toolchain
+      description: Information about your OS, Kernel version, Rust version, Docker/Nix setup, and libc (glibc/musl).
+      placeholder: E.g. Ubuntu 24.04 (Linux 6.8), Rust 1.85, Docker 27.0, Nix 2.24
+    validations:
+      required: true
+  - type: textarea
+    id: logs-and-dumps
+    attributes:
+      label: Logs, Stack Traces, or Runner Output (if any)
+      description: Paste any logs, stack traces, or terminal output. Please wrap them in code blocks (```).
+      placeholder: E.g. RUST_BACKTRACE=1 logs...
+    validations:
+      required: false
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Any other context, such as kernel sysctl settings, CPU governor, or cgroups v2 configuration.
+      placeholder: E.g. Tested on a 16-core bare-metal host with isolcpus enabled...
+    validations:
+      required: false
