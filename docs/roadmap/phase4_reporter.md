@@ -11,10 +11,10 @@ Phase 4 implements data reduction, latency percentile calculation, JSON archivin
 - [x] Correlate dual-libc execution results (glibc vs musl).
 - [x] Strictly separate computation from formatting and I/O.
 
-### 4.2 JSON Artifact Serializer (`crates/reporter/src/archive.rs`)
+### 4.2 JSON Artifact Serializer (`crates/reporter/src/archive.rs` & `index.rs`)
 - [x] Serialize full run data conforming to `docs/schemas/result_schema.json`.
 - [x] Store timestamped runs under `results/data/<year>/<month>/<run_id>.json`.
-- [ ] Maintain an append-only index file `results/index.json` tracking historical runs.
+- [x] Maintain an append-only index file `results/index.json` tracking historical runs.
 
 ### 4.3 Markdown Leaderboard Generator (`crates/reporter/src/markdown.rs`)
 - [x] Generate GitHub-flavored Markdown tables for results presentation.
@@ -22,7 +22,7 @@ Phase 4 implements data reduction, latency percentile calculation, JSON archivin
 - [x] Highlight performance deltas between glibc and musl builds for each framework.
 - [x] Ensure all generated tables, headers, and logs are completely free of emojis.
 
-### 4.4 Chart Plotting Engine (`crates/reporter/src/charts/`)
-- [ ] Generate lightweight standalone SVG bar charts for Throughput vs P99 Latency.
-- [ ] Plot memory footprint comparison graphs (Peak RSS vs Concurrency tier).
-- [ ] Embed SVG assets into `results/charts/` referenced directly by `README.md`.
+### 4.4 Chart Plotting Engine (`crates/reporter/src/chart.rs`)
+- [x] Generate lightweight standalone SVG bar charts for Throughput vs P99 Latency.
+- [x] Plot dual-libc visual comparison (glibc vs musl color accents).
+- [x] Embed SVG assets referenced directly by `README.md`.
