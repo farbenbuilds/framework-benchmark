@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(\.agents/|\.git/|target/)
+      - id: end-of-file-fixer
+        exclude: ^(\.agents/|\.git/|target/|.*\.lock$)
+      - id: check-yaml
+        exclude: ^(\.agents/)
+      - id: check-toml
+        exclude: ^(\.agents/)
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+        args: ["--", "--check"]
+      - id: cargo-check
+      - id: clippy
+        args: ["--all-targets", "--", "-D", "warnings"]
+
+  - repo: local
+    hooks:
+      - id: convention-audit
+        name: check repository conventions
+        entry: pwsh -File scripts/check_conventions.ps1
+        language: system
+        pass_filenames: false
+        always_run: true
