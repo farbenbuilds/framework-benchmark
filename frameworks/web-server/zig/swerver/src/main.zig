@@ -2,6 +2,9 @@ const std = @import("std");
 const net = std.net;
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
     const address = try net.Address.parseIp4("0.0.0.0", 8080);
     var server = try address.listen(.{ .reuse_address = true });
     defer server.deinit();

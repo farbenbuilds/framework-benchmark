@@ -1,4 +1,4 @@
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{App, HttpResponse, HttpServer, Responder, get, web};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -27,13 +27,8 @@ async fn json() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .service(healthz)
-            .service(plaintext)
-            .service(json)
-    })
-    .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+    HttpServer::new(|| App::new().service(healthz).service(plaintext).service(json))
+        .bind(("0.0.0.0", 8080))?
+        .run()
+        .await
 }

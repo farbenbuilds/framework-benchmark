@@ -21,7 +21,9 @@ async fn handle_connection(mut socket: TcpStream) -> Result<(), Box<dyn std::err
         }
         let req = std::str::from_utf8(&buf[..n])?;
         if req.starts_with("GET /healthz") {
-            socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n").await?;
+            socket
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
+                .await?;
         } else if req.starts_with("GET /plaintext") {
             let body = b"Hello, World!";
             let res = format!(
@@ -37,7 +39,9 @@ async fn handle_connection(mut socket: TcpStream) -> Result<(), Box<dyn std::err
             );
             socket.write_all(res.as_bytes()).await?;
         } else {
-            socket.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n").await?;
+            socket
+                .write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n")
+                .await?;
         }
     }
     Ok(())

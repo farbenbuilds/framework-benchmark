@@ -1,6 +1,13 @@
-FROM debian:bookworm-slim AS base
+FROM debian:bookworm-slim AS builder
+WORKDIR /usr/src/app
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl xz-utils && rm -rf /var/lib/apt/lists/*
+RUN curl -sSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-linux-x86_64-0.13.0/zig /usr/local/bin/zig
+COPY . .
+RUN zig build -Doptimize=ReleaseFast
+
+FROM debian:bookworm-slim
 WORKDIR /app
 RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-COPY . /app
+COPY --from=builder /usr/src/app/zig-out/bin/server /app/server
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]

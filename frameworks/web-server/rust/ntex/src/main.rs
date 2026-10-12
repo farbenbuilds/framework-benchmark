@@ -27,13 +27,8 @@ async fn json() -> impl Responder {
 
 #[ntex::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .service(healthz)
-            .service(plaintext)
-            .service(json)
-    })
-    .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+    HttpServer::new(|| App::new().service(healthz).service(plaintext).service(json))
+        .bind(("0.0.0.0", 8080))?
+        .run()
+        .await
 }

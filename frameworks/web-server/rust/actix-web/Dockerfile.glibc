@@ -1,6 +1,11 @@
-FROM debian:bookworm-slim AS base
+FROM rust:1.85-bookworm AS builder
+WORKDIR /usr/src/app
+COPY . .
+RUN cargo build --release
+
+FROM debian:bookworm-slim
 WORKDIR /app
 RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
-COPY . /app
+COPY --from=builder /usr/src/app/target/release/actix-benchmark /app/server
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]
