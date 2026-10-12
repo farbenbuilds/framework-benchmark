@@ -18,7 +18,11 @@ The project evaluates HTTP and WebSocket server and client frameworks across lan
    - Pure aggregation logic, SVG bar charts, append-only historical index, and Markdown table generator.
 6. **Phase 5: Bare-Metal Deployment & GitHub CI/CD**: [docs/roadmap/phase5_deployment.md](docs/roadmap/phase5_deployment.md) [Completed]
    - Linux host tuning (`setup_host.sh`), verification (`verify_host.sh`), runner script (`run_benchmarks.sh`), and GitHub CI/CD workflows (`lint.yml`, `benchmark.yml`).
-7. **Verification & Acceptance Criteria**: [docs/roadmap/acceptance_criteria.md](docs/roadmap/acceptance_criteria.md)
+7. **End-to-End Suite Integration & Dynamic Reporting**: [Completed]
+   - Asynchronous background resource sampling during live measurements (`BackgroundSampler`).
+   - Capability-driven multi-workload execution across endpoints (`run_framework_suite`).
+   - In-place dynamic `README.md` benchmark leaderboard updater (`update_readme_leaderboard`).
+8. **Verification & Acceptance Criteria**: [docs/roadmap/acceptance_criteria.md](docs/roadmap/acceptance_criteria.md)
    - Quality gates, 200 LOC ceiling, zero emojis, zero-allocation hot paths, and reproducibility.
 
 ## Core Rules for Agents and Developers

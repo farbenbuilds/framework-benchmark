@@ -34,10 +34,15 @@ async fn main() -> Result<(), OrchestratorError> {
             dir.display()
         );
         match execute_framework_session(&manifest, &config).await {
-            Ok(res) => println!(
-                "==> Benchmark completed for {}: {} req/s",
-                manifest.framework.name, res.benchmarks[0].requests_per_sec
-            ),
+            Ok(res) => {
+                let rps = res.benchmarks.first().map_or(0.0, |b| b.requests_per_sec);
+                println!(
+                    "==> Benchmark completed for {}: {:.2} req/s across {} workloads",
+                    manifest.framework.name,
+                    rps,
+                    res.benchmarks.len()
+                );
+            }
             Err(e) => eprintln!("==> Failed benchmark for {}: {e}", manifest.framework.name),
         }
     }
