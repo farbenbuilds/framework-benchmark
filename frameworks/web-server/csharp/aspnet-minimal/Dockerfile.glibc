@@ -1,0 +1,6 @@
+FROM debian:bookworm-slim AS base
+WORKDIR /app
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+COPY . /app
+EXPOSE 8080
+ENTRYPOINT ["/app/server"]

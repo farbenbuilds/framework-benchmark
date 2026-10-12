@@ -6,14 +6,14 @@ The project evaluates HTTP and WebSocket server and client frameworks across lan
 
 ## Roadmap Index & Status
 
-1. **Architecture & Test Categories**: [docs/roadmap/overview.md](docs/roadmap/overview.md)
+1. **Architecture & Test Categories**: [docs/roadmap/overview.md](docs/roadmap/overview.md) [Completed]
    - System design, runner workflow, workload matrix, and captured metrics.
 2. **Phase 1: Project Foundation & Specification Standards**: [docs/roadmap/phase1_foundation.md](docs/roadmap/phase1_foundation.md) [Completed]
    - Workspace setup, `framework.toml` manifest schema, and result data models.
 3. **Phase 2: Dual-Libc Infrastructure & Engine Core**: [docs/roadmap/phase2_load_engine.md](docs/roadmap/phase2_load_engine.md) [Completed]
    - Nix flakes, Docker multi-stage templates, Tokio/Httparse load generator, and cgroups v2 harvester.
-4. **Phase 3: Framework Registry & Baseline Implementations**: [docs/roadmap/phase3_frameworks.md](docs/roadmap/phase3_frameworks.md) [Pending Selection]
-   - Framework registry conventions established in `frameworks/README.md`; framework implementations ready to add upon user selection.
+4. **Phase 3: Framework Registry & Baseline Implementations**: [docs/roadmap/phase3_frameworks.md](docs/roadmap/phase3_frameworks.md) [Completed]
+   - Framework registry populated with 32 candidate frameworks across 10 languages (Zig, Rust, Go, C#, C++, JS/TS, Ruby, Java, PHP, Python) with dual-libc Dockerfiles and valid manifests.
 5. **Phase 4: Aggregation, Metrics Processing & Markdown Engine**: [docs/roadmap/phase4_reporter.md](docs/roadmap/phase4_reporter.md) [Completed]
    - Pure aggregation logic, SVG bar charts, append-only historical index, and Markdown table generator.
 6. **Phase 5: Bare-Metal Deployment & GitHub CI/CD**: [docs/roadmap/phase5_deployment.md](docs/roadmap/phase5_deployment.md) [Completed]
@@ -27,7 +27,7 @@ The project evaluates HTTP and WebSocket server and client frameworks across lan
    - Worker connection resilience with zero concurrency drop on socket closure.
    - High-precision wall-clock measurement duration for exact RPS calculation.
    - Dual-source telemetry sampling (`/proc` and cgroups v2) integrated into orchestrator runner.
-9. **Verification & Acceptance Criteria**: [docs/roadmap/acceptance_criteria.md](docs/roadmap/acceptance_criteria.md)
+9. **Verification & Acceptance Criteria**: [docs/roadmap/acceptance_criteria.md](docs/roadmap/acceptance_criteria.md) [Completed]
    - Quality gates, 200 LOC ceiling, zero emojis, zero-allocation hot paths, and reproducibility.
 
 ## Core Rules for Agents and Developers

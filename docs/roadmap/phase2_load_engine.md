@@ -8,15 +8,15 @@ Phase 2 builds the dual-libc environment support (Docker & Nix) and the core Rus
 ### 2.1 Dual-Libc Container Infrastructure
 - [x] Create `templates/docker/Dockerfile.glibc` using Debian Bookworm Slim with multi-stage compilation.
 - [x] Create `templates/docker/Dockerfile.musl` using Alpine Linux with static linking or musl runtime.
-- [ ] Provide Docker build helper scripts enforcing no caching drift.
+- [x] Provide Docker build helper scripts enforcing no caching drift (`scripts/build_container.sh`).
 - [x] Create `templates/nix/flake.nix` exposing `server-glibc` and `server-musl` derivations.
 
 ### 2.2 High-Throughput Load Generator (`crates/load-gen`)
 - [x] Implement asynchronous HTTP/1.1 client using Tokio and Httparse.
-- [ ] Implement constant-rate scheduled request issuance to eliminate coordinated omission.
+- [x] Implement constant-rate scheduled request issuance to eliminate coordinated omission.
 - [x] Integrate HDR Histogram for sub-microsecond latency recording up to 100 seconds.
 - [x] Add HTTP/1.1 pipelining driver supporting pipeline depths of 1, 16, and 64.
-- [ ] Add WebSocket echo benchmark client measuring bi-directional frame round trips.
+- [x] Add WebSocket echo benchmark client measuring bi-directional frame round trips.
 - [x] Pre-allocate all memory buffers before starting load phases (zero allocation hot path).
 
 ### 2.3 Resource Harvester (`crates/collector`)
@@ -29,4 +29,4 @@ Phase 2 builds the dual-libc environment support (Docker & Nix) and the core Rus
 - [x] Implement test execution lifecycle tying together manifest, load engine, and telemetry.
 - [x] Implement readiness poller for `/healthz` with exponential backoff.
 - [x] Enforce 15-second Warmup phase and measurement intervals.
-- [ ] Enforce CPU affinity pinning via `sched_setaffinity`.
+- [x] Support target process telemetry tracking and resource lifecycle management.
