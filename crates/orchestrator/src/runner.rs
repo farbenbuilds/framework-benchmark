@@ -1,5 +1,5 @@
 use crate::error::OrchestratorError;
-use crate::lifecycle::run_framework_test;
+use crate::lifecycle::run_framework_suite;
 use crate::poller::wait_for_ready;
 use common::manifest::FrameworkManifest;
 use common::result::{LibcVariant, RunResult};
@@ -7,7 +7,7 @@ use reporter::archive::write_result_json;
 use reporter::chart::generate_throughput_svg;
 use reporter::index::update_historical_index;
 use reporter::logic::aggregate_leaderboard;
-use reporter::markdown::render_markdown_table;
+use reporter::markdown::{render_markdown_table, update_readme_leaderboard};
 use std::fs;
 use std::path::Path;
 
@@ -18,6 +18,7 @@ pub struct BenchmarkSessionConfig {
     pub duration_secs: u32,
     pub libc: LibcVariant,
     pub output_dir: String,
+    pub readme_path: Option<String>,
 }
 
 impl Default for BenchmarkSessionConfig {
@@ -28,6 +29,7 @@ impl Default for BenchmarkSessionConfig {
             duration_secs: 15,
             libc: LibcVariant::Glibc,
             output_dir: "results".into(),
+            readme_path: Some("README.md".into()),
         }
     }
 }
@@ -46,11 +48,9 @@ pub async fn execute_framework_session(
     )
     .await?;
 
-    let result = run_framework_test(
+    let result = run_framework_suite(
         manifest,
         &target_addr,
-        "plaintext",
-        "/plaintext",
         config.concurrency,
         config.duration_secs,
         config.libc,
@@ -58,6 +58,10 @@ pub async fn execute_framework_session(
     .await?;
 
     persist_session_results(&result, &config.output_dir)?;
+    if let Some(readme) = &config.readme_path {
+        let _ = update_readme_leaderboard(Path::new(readme), std::slice::from_ref(&result));
+    }
+
     Ok(result)
 }
 
