@@ -49,7 +49,7 @@ cargo test --workspace
 
 ## 3. Stage the database and a smoke target
 
-The full runner starts the repository PostgreSQL compose service by default. Start it explicitly when inspecting it, then build and run one framework/libc image before committing to the complete matrix.
+The full runner starts the repository PostgreSQL compose service only when the selected matrix has database workloads. It waits for the service health check and leaves an already-running database untouched. Start it explicitly when inspecting it, then build and run one framework/libc image before committing to the complete matrix.
 
 ```sh
 docker compose -f deploy/postgres/compose.yaml up -d
@@ -88,7 +88,9 @@ DATABASE_URL=postgres://benchmarkdbuser:benchmarkdbpass@127.0.0.1:5432/hello_wor
   scripts/run_benchmarks_all.sh
 ```
 
-Set `CONTAINER_RUNTIME`, `BENCHMARK_WORKERS`, `BENCHMARK_LIBCS`, `DATABASE_URL`, and `BENCHMARK_DATABASE_MANAGED` before invoking the script when the defaults do not fit the host. `BENCHMARK_IMAGE_PULL=1` and `BENCHMARK_NO_CACHE=1` make image refresh behavior explicit. Run the Autobahn conformance suite only against a running WebSocket target:
+Set `BENCHMARK_FRAMEWORK_FILTER` to an exact manifest name to run one adapter, for example `BENCHMARK_FRAMEWORK_FILTER=actix-web scripts/run_benchmarks_all.sh`.
+
+Set `CONTAINER_RUNTIME`, `BENCHMARK_WORKERS`, `BENCHMARK_LIBC`, `DATABASE_URL`, and `BENCHMARK_DATABASE_MANAGED` before invoking the script when the defaults do not fit the host. `BENCHMARK_IMAGE_PULL=1` and `BENCHMARK_NO_CACHE=1` make image refresh behavior explicit. Run the Autobahn conformance suite only against a running WebSocket target:
 
 ```sh
 AUTOBAHN_TARGET_URL=ws://127.0.0.1:8080/ws scripts/run_autobahn_suite.sh

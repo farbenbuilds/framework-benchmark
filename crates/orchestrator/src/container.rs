@@ -42,10 +42,8 @@ pub fn start_container(
     let name = format!("benchmark-{base}-{suffix}-{stamp}");
     let workers = benchmark_workers();
 
-    run_docker(
-        framework_dir,
-        &["build", "--file", dockerfile, "--tag", &image, "."],
-    )?;
+    let build_args = crate::build_options::docker_build_args(dockerfile, &image)?;
+    run_docker(framework_dir, &build_args)?;
     let image_id = image_id(framework_dir, &image)?;
     let mut args = vec![
         "run".into(),

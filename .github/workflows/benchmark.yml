@@ -19,6 +19,8 @@ jobs:
   benchmark:
     name: Run Benchmark Suite
     runs-on: [self-hosted, linux, benchmark]
+    env:
+      BENCHMARK_FRAMEWORK_FILTER: ${{ inputs.framework_filter || 'all' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
