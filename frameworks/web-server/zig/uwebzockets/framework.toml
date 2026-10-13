@@ -1,8 +1,8 @@
 [framework]
 name = "uwebzockets"
-version = "0.1.0"
+version = "0.4.2"
 language = "zig"
-language_version = "0.13.0"
+language_version = "0.16.0"
 website = "https://github.com/farbenbuilds/uWebZockets"
 category = "web-server"
 tier = "micro"
@@ -14,7 +14,7 @@ db_single = false
 db_multi = false
 fortunes = false
 updates = false
-websocket = false
+websocket = true
 http2 = false
 http3 = false
 

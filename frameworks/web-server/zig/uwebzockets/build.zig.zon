@@ -1,7 +1,10 @@
 .{
-    .name = "uwebzockets",
-    .version = "0.1.0",
-    .dependencies = .{},
+    .name = .uwebzockets,
+    .version = "0.4.2",
+    .fingerprint = 0x3b11685b539bfa31,
+    .dependencies = .{
+        .zuws = .{ .path = "zuws" },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",
