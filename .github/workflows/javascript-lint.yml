@@ -1,0 +1,29 @@
+name: Lint JavaScript Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/javascript/**, .github/workflows/javascript-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/javascript/**, .github/workflows/javascript-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: JavaScript format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-javascript
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+      - name: Check formatting
+        run: bunx --bun prettier@3.5.3 --check 'frameworks/web-server/javascript/**/*.{js,ts}'

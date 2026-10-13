@@ -1,1 +1,2 @@
-granian>=1.6.0
+granian==1.7.5
+uvloop==0.21.0

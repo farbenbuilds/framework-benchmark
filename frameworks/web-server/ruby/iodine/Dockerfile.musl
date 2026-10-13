@@ -1,5 +1,6 @@
 FROM ruby:3.3-alpine3.21
 WORKDIR /app
+ENV RUBY_YJIT_ENABLE=1
 RUN apk add --no-cache build-base
 COPY Gemfile ./
 RUN bundle install

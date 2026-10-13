@@ -17,13 +17,16 @@ root = "/app/www"
 path = "/healthz"
 match = "exact"
 try_files = ["/healthz.txt"]
+add_headers = { "Content-Type" = "text/plain; charset=utf-8" }
 
 [[site.location]]
 path = "/plaintext"
 match = "exact"
 try_files = ["/plaintext.txt"]
+add_headers = { "Content-Type" = "text/plain; charset=utf-8" }
 
 [[site.location]]
 path = "/json"
 match = "exact"
 try_files = ["/json.json"]
+add_headers = { "Content-Type" = "application/json" }

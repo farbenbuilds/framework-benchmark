@@ -1,0 +1,32 @@
+name: Lint C# Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/csharp/**, .github/workflows/csharp-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/csharp/**, .github/workflows/csharp-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: C# format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-csharp
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 9.0.x
+      - name: Check formatting
+        shell: bash
+        run: |
+          find frameworks/web-server/csharp -name '*.csproj' -print0 |
+            xargs -0 -n1 dotnet format --verify-no-changes

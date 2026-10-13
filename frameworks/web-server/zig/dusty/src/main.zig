@@ -13,7 +13,8 @@ fn plaintext(_: *http.Request, res: *http.Response) !void {
 
 fn json(_: *http.Request, res: *http.Response) !void {
     res.status = .ok;
-    try res.json(.{ .message = "Hello, World!" }, .{});
+    res.content_type = .json;
+    res.body = "{\"message\":\"Hello, World!\"}";
 }
 
 pub fn main(init: std.process.Init) !void {

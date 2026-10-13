@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, Result, error::ErrorInternalServerError, web};
+use actix_web::{error::ErrorInternalServerError, web, HttpResponse, Result};
 use deadpool_postgres::Pool;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};

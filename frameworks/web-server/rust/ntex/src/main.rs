@@ -1,10 +1,6 @@
 use ntex::web::{self, App, HttpResponse, HttpServer, Responder};
-use serde::Serialize;
 
-#[derive(Serialize)]
-struct Message {
-    message: &'static str,
-}
+const JSON: &[u8] = b"{\"message\":\"Hello, World!\"}";
 
 #[web::get("/healthz")]
 async fn healthz() -> impl Responder {
@@ -20,9 +16,9 @@ async fn plaintext() -> impl Responder {
 
 #[web::get("/json")]
 async fn json() -> impl Responder {
-    web::types::Json(Message {
-        message: "Hello, World!",
-    })
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .body(JSON)
 }
 
 #[ntex::main]

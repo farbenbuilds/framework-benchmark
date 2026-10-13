@@ -10,25 +10,25 @@ fn plaintext(ctx: *swerver.router.HandlerContext) swerver.response.Response {
 }
 
 fn json(ctx: *swerver.router.HandlerContext) swerver.response.Response {
-    return ctx.jsonValue(200, .{ .message = "Hello, World!" });
+    return ctx.json(200, "{\"message\":\"Hello, World!\"}");
 }
 
 pub fn main() !void {
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-    defer _ = gpa.deinit();
-
     var router = swerver.router.Router.init(.{});
     try router.get("/healthz", health);
     try router.get("/plaintext", plaintext);
     try router.get("/json", json);
 
+    var config = swerver.config.ServerConfig.default();
+    config.disable_middleware = true;
+    config.disable_preencoded = false;
     const server = try swerver.ServerBuilder
-        .configDefault()
+        .config(config)
         .router(router)
-        .build(gpa.allocator());
+        .build(std.heap.smp_allocator);
     defer {
         server.deinit();
-        gpa.allocator().destroy(server);
+        std.heap.smp_allocator.destroy(server);
     }
     try server.run(null);
 }

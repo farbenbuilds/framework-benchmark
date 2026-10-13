@@ -5,6 +5,7 @@ SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 RUNTIME=${CONTAINER_RUNTIME:-docker}
 DATABASE_URL=${DATABASE_URL:-postgres://benchmarkdbuser:benchmarkdbpass@127.0.0.1:5432/hello_world}
+BENCHMARK_WORKERS=${BENCHMARK_WORKERS:-$(getconf _NPROCESSORS_ONLN)}
 LIBCS=${BENCHMARK_LIBCS:-"glibc musl"}
 FAILED=0
 CURRENT_CONTAINER=
@@ -75,7 +76,8 @@ for manifest in $manifests; do
         fi
         CURRENT_CONTAINER=$container
         if ! "$RUNTIME" run -d --rm --name "$container" --network host \
-            --label framework-benchmark.managed=true -e DATABASE_URL="$DATABASE_URL" "$tag"; then
+            --label framework-benchmark.managed=true -e DATABASE_URL="$DATABASE_URL" \
+            -e BENCHMARK_WORKERS="$BENCHMARK_WORKERS" "$tag"; then
             FAILED=1
             CURRENT_CONTAINER=
             continue

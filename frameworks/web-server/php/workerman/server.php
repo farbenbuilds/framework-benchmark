@@ -5,8 +5,12 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Workerman\Worker;
 use Workerman\Protocols\Http\Response;
 
+const PLAINTEXT = "Hello, World!";
+const JSON = '{"message":"Hello, World!"}';
+
 $http_worker = new Worker("http://0.0.0.0:8080");
-$http_worker->count = 4;
+$http_worker->count = worker_count();
+$http_worker->reusePort = true;
 
 $http_worker->onMessage = function ($connection, $request) {
     $path = $request->path();
@@ -20,7 +24,7 @@ $http_worker->onMessage = function ($connection, $request) {
         $connection->send(new Response(
             200,
             ['Content-Type' => 'text/plain; charset=utf-8'],
-            'Hello, World!'
+            PLAINTEXT
         ));
         return;
     }
@@ -29,7 +33,7 @@ $http_worker->onMessage = function ($connection, $request) {
         $connection->send(new Response(
             200,
             ['Content-Type' => 'application/json'],
-            json_encode(['message' => 'Hello, World!'])
+            JSON
         ));
         return;
     }
@@ -38,3 +42,11 @@ $http_worker->onMessage = function ($connection, $request) {
 };
 
 Worker::runAll();
+
+function worker_count(): int
+{
+    $configured = filter_var(getenv('BENCHMARK_WORKERS'), FILTER_VALIDATE_INT, [
+        'options' => ['min_range' => 1],
+    ]);
+    return $configured ?: 1;
+}

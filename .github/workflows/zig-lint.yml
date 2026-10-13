@@ -1,0 +1,29 @@
+name: Lint Zig Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/zig/**, .github/workflows/zig-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/zig/**, .github/workflows/zig-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Zig format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-zig
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Check formatting
+        run: find frameworks/web-server/zig -name '*.zig' -print0 | xargs -0 zig fmt --check

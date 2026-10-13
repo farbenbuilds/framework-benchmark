@@ -1,0 +1,33 @@
+name: Lint Rust Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/rust/**, .github/workflows/rust-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/rust/**, .github/workflows/rust-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Rust format and clippy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-rust
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting and clippy
+        shell: bash
+        run: |
+          find frameworks/web-server/rust -name Cargo.toml -print0 |
+            xargs -0 -n1 sh -c 'cargo fmt --manifest-path "$0" -- --check && cargo clippy --manifest-path "$0" --all-targets -- -D warnings'

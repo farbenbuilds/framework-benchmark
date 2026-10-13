@@ -1,0 +1,37 @@
+name: Lint Java Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/java/**, .github/workflows/java-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/java/**, .github/workflows/java-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Java compile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-java
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+          cache-dependency-path: frameworks/web-server/java/**/pom.xml
+      - name: Compile framework sources
+        shell: bash
+        run: |
+          rg --files frameworks/web-server/java -g pom.xml | while read -r manifest; do
+            module=$(dirname "$manifest")
+            (cd "$module" && mvn -B -q -DskipTests package)
+          done

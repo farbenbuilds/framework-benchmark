@@ -1,6 +1,7 @@
 use crate::error::OrchestratorError;
 use common::manifest::FrameworkManifest;
 use common::result::LibcVariant;
+use std::env;
 use std::path::Path;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -37,6 +38,7 @@ pub fn start_container(
     let base = sanitize_name(&manifest.framework.name);
     let image = format!("framework-benchmark/{base}:{suffix}");
     let name = format!("benchmark-{base}-{suffix}-{stamp}");
+    let workers = benchmark_workers();
 
     run_docker(
         framework_dir,
@@ -51,6 +53,8 @@ pub fn start_container(
         "framework-benchmark.managed=true".into(),
         "--network".into(),
         "host".into(),
+        "--env".into(),
+        format!("BENCHMARK_WORKERS={workers}"),
     ];
     if let Some(database_url) = database_url {
         args.push("--env".into());
@@ -68,6 +72,14 @@ pub fn start_container(
 
 pub fn stop_container(framework_dir: &Path, target: &ContainerTarget) {
     let _ = run_docker(framework_dir, &["rm", "--force", &target.name]);
+}
+
+fn benchmark_workers() -> usize {
+    let configured = env::var("BENCHMARK_WORKERS")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .filter(|value: &usize| *value > 0);
+    configured.unwrap_or_else(|| std::thread::available_parallelism().map_or(1, usize::from))
 }
 
 fn run_docker<S: AsRef<str>>(cwd: &Path, args: &[S]) -> Result<String, OrchestratorError> {
