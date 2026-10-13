@@ -1,6 +1,6 @@
 use crate::workload::{Workload, execute_single_workload};
 use common::manifest::FrameworkManifest;
-use common::result::{LibcVariant, RunResult};
+use common::result::{LibcVariant, RunProvenance, RunResult};
 use std::path::Path;
 
 #[derive(Debug, Clone, Copy)]
@@ -151,6 +151,7 @@ fn test_result(
         libc,
         timestamp_epoch_secs: crate::machine::current_epoch_secs(),
         machine: crate::machine::current_machine_info(),
+        provenance: RunProvenance::default(),
         benchmarks: vec![metrics],
     }
 }
@@ -172,6 +173,7 @@ fn suite_result(
         libc,
         timestamp_epoch_secs,
         machine: crate::machine::current_machine_info(),
+        provenance: RunProvenance::default(),
         benchmarks,
     }
 }

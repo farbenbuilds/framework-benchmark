@@ -11,6 +11,7 @@ pub struct ContainerTarget {
     pub name: String,
     pub pid: u32,
     pub cgroup_dir: Option<std::path::PathBuf>,
+    pub image_id: String,
 }
 
 pub fn start_container(
@@ -45,6 +46,7 @@ pub fn start_container(
         framework_dir,
         &["build", "--file", dockerfile, "--tag", &image, "."],
     )?;
+    let image_id = image_id(framework_dir, &image)?;
     let mut args = vec![
         "run".into(),
         "--detach".into(),
@@ -83,7 +85,22 @@ pub fn start_container(
         name,
         pid,
         cgroup_dir: cgroup_dir_for_pid(pid),
+        image_id,
     })
+}
+
+fn image_id(framework_dir: &Path, image: &str) -> Result<String, OrchestratorError> {
+    let id = run_docker(
+        framework_dir,
+        &["image", "inspect", "--format={{.Id}}", image],
+    )?;
+    let id = id.trim();
+    if id.is_empty() {
+        return Err(OrchestratorError::Process(
+            "container image has no ID".into(),
+        ));
+    }
+    Ok(id.into())
 }
 
 pub fn stop_container(framework_dir: &Path, name: &str) -> Result<(), OrchestratorError> {

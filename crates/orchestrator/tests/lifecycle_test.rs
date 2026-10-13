@@ -88,6 +88,8 @@ startup_timeout_seconds = 2
     assert_eq!(result.framework_name, "mock");
     assert_eq!(result.benchmarks.len(), 1);
     assert_eq!(result.benchmarks[0].category, "plaintext");
+    assert_eq!(result.benchmarks[0].traffic.pipeline_depth, 1);
+    assert_eq!(result.benchmarks[0].traffic.connection_mode, "keep_alive");
     assert!(result.benchmarks[0].requests_per_sec > 0.0);
 
     server_handle.abort();

@@ -1,5 +1,5 @@
 use collector::BackgroundSampler;
-use common::result::TestMetrics;
+use common::result::{TestMetrics, TrafficSettings};
 use load_gen::autobahn::AutobahnSuiteRunner;
 use load_gen::histogram::LatencyRecorder;
 use load_gen::stats::WorkerStats;
@@ -78,5 +78,10 @@ pub async fn execute_websocket_workload(
         latency: recorder.export_distribution(),
         resources,
         status_codes: stats.to_status_code_counts(),
+        traffic: TrafficSettings {
+            pipeline_depth: 1,
+            connection_mode: "keep_alive".into(),
+            target_rps: None,
+        },
     })
 }

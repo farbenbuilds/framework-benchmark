@@ -96,7 +96,7 @@ AUTOBAHN_TARGET_URL=ws://127.0.0.1:8080/ws scripts/run_autobahn_suite.sh
 
 ## 5. Inspect, compare, and retain results
 
-Immutable JSON artifacts are stored under `results/data/YYYY/MM/`; the index is `results/index.json`, and generated tables/charts are in `results/`. The orchestrator replaces the README block once per selected matrix so its tables only compare results from that invocation. Review the intended result diff before staging it:
+Immutable JSON artifacts are stored under `results/data/YYYY/MM/`; the index is `results/index.json`, and generated tables/charts are in `results/`. Each artifact records the Git revision, inspected local container image ID, and per-workload traffic settings. The orchestrator replaces the README block once per selected matrix so its tables only compare results from that invocation. Review the intended result diff before staging it:
 
 ```sh
 find results -type f | sort

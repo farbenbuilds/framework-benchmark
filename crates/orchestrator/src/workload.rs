@@ -1,6 +1,6 @@
 use crate::lifecycle::{SuiteExecutionConfig, SuiteTiming};
 use collector::BackgroundSampler;
-use common::result::TestMetrics;
+use common::result::{TestMetrics, TrafficSettings};
 use load_gen::engine::execute_benchmark;
 use load_gen::{BenchmarkPlan, ConnectionMode};
 use std::time::Duration;
@@ -54,6 +54,17 @@ impl<'a> Workload<'a> {
             target_rps: Some(target_rps),
         }
     }
+
+    fn traffic_settings(self) -> TrafficSettings {
+        TrafficSettings {
+            pipeline_depth: self.pipeline_depth,
+            connection_mode: match self.connection_mode {
+                ConnectionMode::KeepAlive => "keep_alive".into(),
+                ConnectionMode::Churn => "churn".into(),
+            },
+            target_rps: self.target_rps,
+        }
+    }
 }
 
 pub(crate) async fn execute_single_workload(
@@ -79,6 +90,7 @@ pub(crate) async fn execute_single_workload(
         latency: result.latency.export_distribution(),
         resources,
         status_codes: result.stats.to_status_code_counts(),
+        traffic: workload.traffic_settings(),
     })
 }
 

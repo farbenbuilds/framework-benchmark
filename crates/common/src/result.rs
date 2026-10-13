@@ -43,6 +43,28 @@ pub struct ResourceUsage {
     pub rapl_joules: Option<f64>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RunProvenance {
+    pub revision: String,
+    pub image_id: Option<String>,
+}
+
+impl Default for RunProvenance {
+    fn default() -> Self {
+        Self {
+            revision: "unknown".into(),
+            image_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TrafficSettings {
+    pub pipeline_depth: usize,
+    pub connection_mode: String,
+    pub target_rps: Option<u64>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StatusCodeCounts {
     pub http_2xx: u64,
@@ -62,6 +84,7 @@ pub struct TestMetrics {
     pub latency: LatencyDistribution,
     pub resources: ResourceUsage,
     pub status_codes: StatusCodeCounts,
+    pub traffic: TrafficSettings,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -72,6 +95,7 @@ pub struct RunResult {
     pub libc: LibcVariant,
     pub timestamp_epoch_secs: u64,
     pub machine: MachineInfo,
+    pub provenance: RunProvenance,
     pub benchmarks: Vec<TestMetrics>,
 }
 

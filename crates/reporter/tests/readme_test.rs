@@ -1,6 +1,6 @@
 use common::result::{
-    LatencyDistribution, LibcVariant, MachineInfo, ResourceUsage, RunResult, StatusCodeCounts,
-    TestMetrics,
+    LatencyDistribution, LibcVariant, MachineInfo, ResourceUsage, RunProvenance, RunResult,
+    StatusCodeCounts, TestMetrics, TrafficSettings,
 };
 use reporter::{render_readme_leaderboards, update_readme_leaderboard};
 use std::fs;
@@ -21,6 +21,7 @@ fn create_sample_run(name: &str, category: &str, rps: f64) -> RunResult {
             logical_cores: 16,
             total_memory_mb: 16384,
         },
+        provenance: RunProvenance::default(),
         benchmarks: vec![TestMetrics {
             category: category.into(),
             concurrency: 64,
@@ -52,6 +53,11 @@ fn create_sample_run(name: &str, category: &str, rps: f64) -> RunResult {
                 http_4xx: 2,
                 http_5xx: 1,
                 errors: 3,
+            },
+            traffic: TrafficSettings {
+                pipeline_depth: 1,
+                connection_mode: "keep_alive".into(),
+                target_rps: None,
             },
         }],
     }

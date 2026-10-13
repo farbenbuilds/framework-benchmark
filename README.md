@@ -10,7 +10,7 @@ Inspired by [TechEmpower FrameworkBenchmarks](https://github.com/TechEmpower/Fra
 - **Dual-Libc Support**: Evaluates frameworks built against both **GNU C Library (glibc)** and **musl libc** (Alpine/Distroless).
 - **Extensible Framework Registry**: Declarative framework definitions in `frameworks/` using **Docker** and **Nix**.
 - **Native Rust Harness**: Ultra-low-overhead asynchronous load generator and Linux resource profiler (cgroups v2, `/proc`, peak RSS, CPU utilization).
-- **Publishable Artifacts**: Immutable JSON results, category charts, and complete Markdown tables are generated locally. A labelled dedicated runner publishes reviewed results to this `README.md`.
+- **Publishable Artifacts**: Immutable JSON results include revision, container image ID, and exact traffic settings alongside category charts and complete Markdown tables. A labelled dedicated runner publishes reviewed results to this `README.md`.
 
 ## Project Roadmap and Architecture
 
