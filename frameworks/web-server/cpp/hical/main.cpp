@@ -1,44 +1,25 @@
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
+#include "core/HttpServer.h"
 
-int main() {
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    int opt = 1;
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#include <boost/json.hpp>
 
-    sockaddr_in address{};
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(8080);
+using namespace hical;
 
-    bind(server_fd, (struct sockaddr*)&address, sizeof(address));
-    listen(server_fd, 4096);
+int main()
+{
+	HttpServer server(8080);
+	server.setIdleTimeout(0);
 
-    while (true) {
-        int client_fd = accept(server_fd, nullptr, nullptr);
-        if (client_fd < 0) continue;
+	server.router().get("/healthz", [](const HttpRequest&) -> HttpResponse {
+		return HttpResponse::ok();
+	});
+	server.router().get("/plaintext", [](const HttpRequest&) -> HttpResponse {
+		return HttpResponse::ok("Hello, World!", "text/plain; charset=utf-8");
+	});
+	server.router().get("/json", [](const HttpRequest&) -> HttpResponse {
+		return HttpResponse::json(boost::json::object {
+			{"message", "Hello, World!"},
+		});
+	});
 
-        char buffer[1024] = {0};
-        read(client_fd, buffer, sizeof(buffer) - 1);
-
-        if (strstr(buffer, "GET /healthz") == buffer) {
-            const char* resp = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
-            write(client_fd, resp, strlen(resp));
-        } else if (strstr(buffer, "GET /plaintext") == buffer) {
-            const char* resp = "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 13\r\n\r\nHello, World!";
-            write(client_fd, resp, strlen(resp));
-        } else if (strstr(buffer, "GET /json") == buffer) {
-            const char* resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 27\r\n\r\n{\"message\": \"Hello, World!\"}";
-            write(client_fd, resp, strlen(resp));
-        } else {
-            const char* resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-            write(client_fd, resp, strlen(resp));
-        }
-        close(client_fd);
-    }
-    return 0;
+	server.start();
 }

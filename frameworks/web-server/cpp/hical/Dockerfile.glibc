@@ -1,11 +1,19 @@
-FROM debian:bookworm-slim AS build
+FROM ubuntu:24.04 AS build
 WORKDIR /src
-RUN apt-get update -qq && apt-get install -y --no-install-recommends cmake make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    cmake g++ git libboost-json1.83-dev libssl-dev make zlib1g-dev && \
+    rm -rf /var/lib/apt/lists/*
+RUN git init /opt/hical && git -C /opt/hical remote add origin \
+    https://github.com/Hical61/Hical.git && git -C /opt/hical fetch --depth 1 \
+    origin e61cb09a0c699fc1ffcdb9824a8edcad88d22fb0 && \
+    git -C /opt/hical checkout --detach FETCH_HEAD
 COPY CMakeLists.txt main.cpp ./
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel
 
-FROM debian:bookworm-slim
+FROM ubuntu:24.04
 WORKDIR /app
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    libboost-json1.83.0 libssl3 zlib1g && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/build/server /app/server
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]

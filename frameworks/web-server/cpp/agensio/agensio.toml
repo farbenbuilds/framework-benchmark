@@ -1,0 +1,29 @@
+[server]
+workers = 0
+idle_timeout = 0
+protocols = ["h1"]
+
+[log]
+access = "off"
+error = "stderr"
+
+[[site]]
+server_name = ["localhost"]
+listen = ["0.0.0.0:8080"]
+default = true
+root = "/app/www"
+
+[[site.location]]
+path = "/healthz"
+match = "exact"
+try_files = ["/healthz.txt"]
+
+[[site.location]]
+path = "/plaintext"
+match = "exact"
+try_files = ["/plaintext.txt"]
+
+[[site.location]]
+path = "/json"
+match = "exact"
+try_files = ["/json.json"]
