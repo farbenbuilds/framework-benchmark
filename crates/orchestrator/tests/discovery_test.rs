@@ -1,4 +1,4 @@
-use orchestrator::discovery::discover_frameworks;
+use orchestrator::discovery::{discover_frameworks, select_frameworks};
 use std::fs;
 
 const SAMPLE_MANIFEST: &str = r#"
@@ -58,6 +58,21 @@ fn test_discover_empty_directory() {
     assert_eq!(discovered.len(), 0);
 
     let _ = fs::remove_dir_all(temp_empty);
+}
+
+#[test]
+fn select_frameworks_rejects_an_unknown_name() {
+    let temp_root = std::env::temp_dir().join("bench_discovery_filter_test");
+    let target_dir = temp_root.join("rust").join("sample");
+    fs::create_dir_all(&target_dir).expect("create test directory failed");
+    fs::write(target_dir.join("framework.toml"), SAMPLE_MANIFEST).expect("write manifest failed");
+
+    let frameworks = discover_frameworks(&temp_root).expect("discover framework registry failed");
+    assert_eq!(select_frameworks(frameworks, "sample").unwrap().len(), 1);
+    let frameworks = discover_frameworks(&temp_root).expect("discover framework registry failed");
+    assert!(select_frameworks(frameworks, "missing").is_err());
+
+    let _ = fs::remove_dir_all(temp_root);
 }
 
 #[test]

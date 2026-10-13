@@ -1,5 +1,5 @@
 use collector::BackgroundSampler;
-use common::result::TestMetrics;
+use common::result::{TestMetrics, TrafficSettings};
 use load_gen::autobahn::AutobahnSuiteRunner;
 use load_gen::histogram::LatencyRecorder;
 use load_gen::stats::WorkerStats;
@@ -27,7 +27,7 @@ pub async fn execute_websocket_workload(
         handles.push(tokio::spawn(async move {
             let mut recorder = LatencyRecorder::default();
             let mut stats = WorkerStats::default();
-            let _ = AutobahnSuiteRunner::run_echo_benchmark(
+            let result = AutobahnSuiteRunner::run_echo_benchmark(
                 &addr,
                 &path,
                 deadline,
@@ -35,20 +35,35 @@ pub async fn execute_websocket_workload(
                 &mut stats,
             )
             .await;
-            (recorder, stats)
+            (result, recorder, stats)
         }));
     }
 
     let mut recorder = LatencyRecorder::default();
     let mut stats = WorkerStats::default();
+    let mut failure = None;
     for handle in handles {
-        if let Ok((worker_recorder, worker_stats)) = handle.await {
-            recorder.combine(&worker_recorder);
-            stats.merge(&worker_stats);
+        match handle.await {
+            Ok((result, worker_recorder, worker_stats)) => {
+                recorder.combine(&worker_recorder);
+                stats.merge(&worker_stats);
+                if let Err(error) = result {
+                    failure.get_or_insert_with(|| error.to_string());
+                }
+            }
+            Err(error) => {
+                stats.record_error();
+                failure.get_or_insert_with(|| error.to_string());
+            }
         }
     }
 
     let resources = sampler.stop().await;
+    if let Some(error) = failure {
+        return Err(crate::error::OrchestratorError::Process(format!(
+            "websocket workload failed: {error}"
+        )));
+    }
     let elapsed_secs = started.elapsed().as_secs_f64().max(0.001);
     let rps = stats.requests_completed as f64 / elapsed_secs;
     let mb_per_sec = (stats.bytes_transferred as f64 / (1024.0 * 1024.0)) / elapsed_secs;
@@ -63,5 +78,10 @@ pub async fn execute_websocket_workload(
         latency: recorder.export_distribution(),
         resources,
         status_codes: stats.to_status_code_counts(),
+        traffic: TrafficSettings {
+            pipeline_depth: 1,
+            connection_mode: "keep_alive".into(),
+            target_rps: None,
+        },
     })
 }

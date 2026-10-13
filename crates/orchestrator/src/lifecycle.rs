@@ -1,10 +1,7 @@
-use collector::BackgroundSampler;
+use crate::workload::{Workload, execute_single_workload};
 use common::manifest::FrameworkManifest;
-use common::result::{LibcVariant, RunResult, TestMetrics};
-use load_gen::engine::execute_benchmark;
-use load_gen::plan::BenchmarkPlan;
+use common::result::{LibcVariant, RunProvenance, RunResult};
 use std::path::Path;
-use std::time::Duration;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SuiteTiming {
@@ -30,16 +27,7 @@ pub struct SuiteExecutionConfig<'a> {
     pub target_pid: Option<u32>,
     pub cgroup_dir: Option<&'a Path>,
     pub timing: SuiteTiming,
-}
-
-#[derive(Clone, Copy)]
-struct WorkloadConfig<'a> {
-    target_addr: &'a str,
-    concurrency: u32,
-    duration_secs: u32,
-    target_pid: Option<u32>,
-    cgroup_dir: Option<&'a Path>,
-    timing: SuiteTiming,
+    pub extended_profiles: bool,
 }
 
 pub async fn run_framework_test(
@@ -51,24 +39,19 @@ pub async fn run_framework_test(
     duration_secs: u32,
     libc: LibcVariant,
 ) -> Result<RunResult, crate::error::OrchestratorError> {
-    let config = WorkloadConfig {
+    let config = SuiteExecutionConfig {
         target_addr,
         concurrency,
         duration_secs,
+        libc,
         target_pid: None,
         cgroup_dir: None,
         timing: SuiteTiming::default(),
+        extended_profiles: false,
     };
-    let metrics = execute_single_workload(config, category, endpoint_path).await?;
-    Ok(RunResult {
-        run_id: "test-run-1".into(),
-        framework_name: manifest.framework.name.clone(),
-        framework_version: manifest.framework.version.clone(),
-        libc,
-        timestamp_epoch_secs: crate::machine::current_epoch_secs(),
-        machine: crate::machine::current_machine_info(),
-        benchmarks: vec![metrics],
-    })
+    let metrics =
+        execute_single_workload(config, Workload::standard(category, endpoint_path)).await?;
+    Ok(test_result(manifest, libc, metrics))
 }
 
 pub async fn run_framework_suite(
@@ -88,6 +71,7 @@ pub async fn run_framework_suite(
         target_pid,
         cgroup_dir,
         timing: SuiteTiming::default(),
+        extended_profiles: true,
     };
     run_framework_suite_with_timing(manifest, config).await
 }
@@ -97,28 +81,20 @@ pub async fn run_framework_suite_with_timing(
     config: SuiteExecutionConfig<'_>,
 ) -> Result<RunResult, crate::error::OrchestratorError> {
     let mut benchmarks = Vec::new();
-    let caps = &manifest.capabilities;
-    let endpoints = [
-        (caps.plaintext, "plaintext", "/plaintext"),
-        (caps.json, "json", "/json"),
-        (caps.db_single, "db_single", "/db"),
-        (caps.db_multi, "db_multi", "/queries?queries=20"),
-        (caps.fortunes, "fortunes", "/fortunes"),
-        (caps.updates, "updates", "/updates?queries=20"),
-    ];
-
-    for (enabled, cat, path) in endpoints {
-        if enabled {
-            benchmarks
-                .push(execute_single_workload(WorkloadConfig::from(config), cat, path).await?);
+    for workload in techempower_workloads(manifest) {
+        benchmarks.push(execute_single_workload(config, workload).await?);
+    }
+    if config.extended_profiles && manifest.capabilities.plaintext {
+        for workload in extended_workloads(config.concurrency) {
+            benchmarks.push(execute_single_workload(config, workload).await?);
         }
     }
-
-    if caps.websocket {
+    if manifest.capabilities.websocket {
+        let path = manifest.runtime.websocket_path.as_deref().unwrap_or("/ws");
         benchmarks.push(
             crate::ws_bench::execute_websocket_workload(
                 config.target_addr,
-                "/ws",
+                path,
                 config.concurrency,
                 config.duration_secs,
                 config.target_pid,
@@ -127,73 +103,87 @@ pub async fn run_framework_suite_with_timing(
             .await?,
         );
     }
-
-    Ok(RunResult {
-        run_id: format!("{}-{:?}-suite", manifest.framework.name, config.libc).to_lowercase(),
-        framework_name: manifest.framework.name.clone(),
-        framework_version: manifest.framework.version.clone(),
-        libc: config.libc,
-        timestamp_epoch_secs: crate::machine::current_epoch_secs(),
-        machine: crate::machine::current_machine_info(),
-        benchmarks,
-    })
+    Ok(suite_result(manifest, config.libc, benchmarks))
 }
 
-impl<'a> From<SuiteExecutionConfig<'a>> for WorkloadConfig<'a> {
-    fn from(config: SuiteExecutionConfig<'a>) -> Self {
-        Self {
-            target_addr: config.target_addr,
-            concurrency: config.concurrency,
-            duration_secs: config.duration_secs,
-            target_pid: config.target_pid,
-            cgroup_dir: config.cgroup_dir,
-            timing: config.timing,
-        }
+fn techempower_workloads(manifest: &FrameworkManifest) -> Vec<Workload<'static>> {
+    let caps = &manifest.capabilities;
+    [
+        (
+            caps.plaintext,
+            Workload::standard("plaintext", "/plaintext"),
+        ),
+        (caps.json, Workload::standard("json", "/json")),
+        (caps.db_single, Workload::standard("single_query", "/db")),
+        (
+            caps.db_multi,
+            Workload::standard("multiple_queries", "/queries?queries=20"),
+        ),
+        (caps.fortunes, Workload::standard("fortunes", "/fortunes")),
+        (
+            caps.updates,
+            Workload::standard("data_updates", "/updates?queries=20"),
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(enabled, workload)| enabled.then_some(workload))
+    .collect()
+}
+
+fn extended_workloads(concurrency: u32) -> [Workload<'static>; 3] {
+    let target_rps = u64::from(concurrency).saturating_mul(100);
+    [
+        Workload::pipeline("http1_pipelining_16", "/plaintext", 16),
+        Workload::churn("connection_churn", "/plaintext"),
+        Workload::paced("paced_plaintext", "/plaintext", target_rps),
+    ]
+}
+
+fn test_result(
+    manifest: &FrameworkManifest,
+    libc: LibcVariant,
+    metrics: common::result::TestMetrics,
+) -> RunResult {
+    RunResult {
+        run_id: "test-run-1".into(),
+        framework_name: manifest.framework.name.clone(),
+        framework_version: manifest.framework.version.clone(),
+        libc,
+        timestamp_epoch_secs: crate::machine::current_epoch_secs(),
+        machine: crate::machine::current_machine_info(),
+        provenance: RunProvenance::default(),
+        benchmarks: vec![metrics],
     }
 }
 
-async fn execute_single_workload(
-    config: WorkloadConfig<'_>,
-    category: &str,
-    endpoint_path: &str,
-) -> Result<TestMetrics, crate::error::OrchestratorError> {
-    let warmup_plan = BenchmarkPlan {
-        target_addr: config.target_addr.to_string(),
-        path: endpoint_path.to_string(),
-        concurrency: (config.concurrency as usize).min(16),
-        duration_secs: config.timing.warmup_secs,
-        pipeline_depth: 1,
-        target_rps: None,
-    };
-    let _ = execute_benchmark(warmup_plan).await?;
+fn suite_result(
+    manifest: &FrameworkManifest,
+    libc: LibcVariant,
+    benchmarks: Vec<common::result::TestMetrics>,
+) -> RunResult {
+    let timestamp_epoch_secs = crate::machine::current_epoch_secs();
+    RunResult {
+        run_id: format!(
+            "{}-{libc:?}-suite-{timestamp_epoch_secs}",
+            manifest.framework.name
+        )
+        .to_lowercase(),
+        framework_name: manifest.framework.name.clone(),
+        framework_version: manifest.framework.version.clone(),
+        libc,
+        timestamp_epoch_secs,
+        machine: crate::machine::current_machine_info(),
+        provenance: RunProvenance::default(),
+        benchmarks,
+    }
+}
 
-    let sampler = BackgroundSampler::spawn_target(
-        config.target_pid,
-        config.cgroup_dir,
-        Duration::from_millis(50),
-    );
+#[cfg(test)]
+mod tests {
+    use super::extended_workloads;
 
-    let measurement_plan = BenchmarkPlan {
-        target_addr: config.target_addr.to_string(),
-        path: endpoint_path.to_string(),
-        concurrency: config.concurrency as usize,
-        duration_secs: u64::from(config.duration_secs),
-        pipeline_depth: 1,
-        target_rps: None,
-    };
-    let exec_res = execute_benchmark(measurement_plan).await?;
-    let resources = sampler.stop().await;
-    tokio::time::sleep(Duration::from_secs(config.timing.cooldown_secs)).await;
-
-    Ok(TestMetrics {
-        category: category.to_string(),
-        concurrency: config.concurrency,
-        duration_secs: config.duration_secs,
-        requests_total: exec_res.total_requests,
-        requests_per_sec: exec_res.requests_per_sec,
-        transfer_mb_per_sec: exec_res.transfer_mb_per_sec,
-        latency: exec_res.latency.export_distribution(),
-        resources,
-        status_codes: exec_res.stats.to_status_code_counts(),
-    })
+    #[test]
+    fn extended_profiles_use_a_bounded_paced_rate() {
+        assert_eq!(extended_workloads(8)[2].target_rps, Some(800));
+    }
 }

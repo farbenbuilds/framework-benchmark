@@ -1,7 +1,12 @@
 use crate::autobahn::builder::FrameBuilder;
-use crate::autobahn::frame::{FrameOpcode, parse_frame_header};
+use crate::autobahn::echo::validate_echo_frame;
+use crate::autobahn::frame::{
+    FrameOpcode, MAX_FRAME_HEADER_BYTES, MAX_FRAME_PAYLOAD_BYTES, parse_frame_header,
+};
+use crate::autobahn::handshake::perform_handshake;
 use crate::error::LoadGenError;
 use crate::histogram::LatencyRecorder;
+use crate::io::{connect_until, read_until, write_until};
 use crate::stats::WorkerStats;
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -11,24 +16,6 @@ use tokio::net::TcpStream;
 pub struct AutobahnSuiteRunner;
 
 impl AutobahnSuiteRunner {
-    pub async fn perform_handshake(
-        stream: &mut TcpStream,
-        addr: &str,
-        path: &str,
-    ) -> Result<(), LoadGenError> {
-        let req = format!(
-            "GET {path} HTTP/1.1\r\nHost: {addr}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"
-        );
-        stream.write_all(req.as_bytes()).await?;
-
-        let mut buf = vec![0u8; 1024];
-        let n = stream.read(&mut buf).await?;
-        if n == 0 || !buf[..n].starts_with(b"HTTP/1.1 101") {
-            return Err(LoadGenError::Protocol("handshake upgrade rejected".into()));
-        }
-        Ok(())
-    }
-
     pub async fn test_echo_message(
         stream: &mut TcpStream,
         text: &str,
@@ -37,15 +24,19 @@ impl AutobahnSuiteRunner {
         let frame = FrameBuilder::build_text_message(text, mask);
         stream.write_all(&frame).await?;
 
-        let mut buf = vec![0u8; 4096];
-        let n = stream.read(&mut buf).await?;
-        if let Some((header, offset)) = parse_frame_header(&buf[..n])? {
-            if header.opcode == FrameOpcode::Text {
-                let payload = &buf[offset..offset + header.payload_len];
-                return Ok(payload == text.as_bytes());
-            }
+        let mut buf = vec![0; MAX_FRAME_PAYLOAD_BYTES + MAX_FRAME_HEADER_BYTES];
+        match read_echo_frame(
+            stream,
+            text.as_bytes(),
+            &mut buf,
+            Instant::now() + Duration::from_secs(1),
+        )
+        .await
+        {
+            Ok(_) => Ok(true),
+            Err(LoadGenError::Protocol(_)) => Ok(false),
+            Err(error) => Err(error),
         }
-        Ok(false)
     }
 
     pub async fn run_echo_benchmark(
@@ -55,25 +46,41 @@ impl AutobahnSuiteRunner {
         recorder: &mut LatencyRecorder,
         stats: &mut WorkerStats,
     ) -> Result<(), LoadGenError> {
-        let mut stream = TcpStream::connect(addr).await?;
+        let mut stream = match connect_until(addr, deadline).await {
+            Ok(stream) => stream,
+            Err(error) => {
+                stats.record_error();
+                return Err(error);
+            }
+        };
         let _ = stream.set_nodelay(true);
-        Self::perform_handshake(&mut stream, addr, path).await?;
+        if let Err(error) = perform_handshake(&mut stream, addr, path, deadline).await {
+            stats.record_error();
+            return Err(error);
+        }
 
         let msg = "framework-benchmark-echo";
         let mask = [0x12, 0x34, 0x56, 0x78];
         let frame = FrameBuilder::build_text_message(msg, mask);
-        let mut buf = vec![0u8; 4096];
+        let mut buf = vec![0; MAX_FRAME_PAYLOAD_BYTES + MAX_FRAME_HEADER_BYTES];
 
         while Instant::now() < deadline {
             let start = Instant::now();
-            stream.write_all(&frame).await?;
-            let n = stream.read(&mut buf).await?;
-            if n == 0 {
-                break;
+            if let Err(error) = write_until(&mut stream, &frame, deadline).await {
+                stats.record_error();
+                return Err(error);
             }
+            let frame_len =
+                match read_echo_frame(&mut stream, msg.as_bytes(), &mut buf, deadline).await {
+                    Ok(frame_len) => frame_len,
+                    Err(error) => {
+                        stats.record_error();
+                        return Err(error);
+                    }
+                };
             let elapsed_us = start.elapsed().as_micros() as u64;
             recorder.record_micros(elapsed_us);
-            stats.record_response(200, n);
+            stats.record_response(200, frame_len);
         }
         Ok(())
     }
@@ -103,5 +110,31 @@ impl AutobahnSuiteRunner {
             }
             () = &mut timeout => Ok(false),
         }
+    }
+}
+
+async fn read_echo_frame(
+    stream: &mut TcpStream,
+    expected: &[u8],
+    buf: &mut [u8],
+    deadline: Instant,
+) -> Result<usize, LoadGenError> {
+    let mut used = 0;
+    loop {
+        if let Some(frame_len) = validate_echo_frame(&buf[..used], expected)? {
+            return Ok(frame_len);
+        }
+        if used == buf.len() {
+            return Err(LoadGenError::Protocol(
+                "websocket echo exceeds read buffer".into(),
+            ));
+        }
+        let read = read_until(stream, &mut buf[used..], deadline).await?;
+        if read == 0 {
+            return Err(LoadGenError::Protocol(
+                "connection closed before websocket echo".into(),
+            ));
+        }
+        used += read;
     }
 }

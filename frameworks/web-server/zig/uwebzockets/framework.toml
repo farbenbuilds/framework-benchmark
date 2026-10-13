@@ -28,4 +28,5 @@ dockerfile_musl = "Dockerfile.musl"
 [runtime]
 port = 8080
 healthcheck_path = "/healthz"
+websocket_path = "/ws"
 startup_timeout_seconds = 10

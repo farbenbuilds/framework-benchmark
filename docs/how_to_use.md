@@ -49,7 +49,7 @@ cargo test --workspace
 
 ## 3. Stage the database and a smoke target
 
-The full runner starts the repository PostgreSQL compose service by default. Start it explicitly when inspecting it, then build and run one framework/libc image before committing to the complete matrix.
+The full runner starts the repository PostgreSQL compose service only when the selected matrix has database workloads. It waits for the service health check and leaves an already-running database untouched. Start it explicitly when inspecting it, then build and run one framework/libc image before committing to the complete matrix.
 
 ```sh
 docker compose -f deploy/postgres/compose.yaml up -d
@@ -72,6 +72,8 @@ BENCHMARK_SMALL_HOST=1 BENCHMARK_LIBC=glibc scripts/run_benchmarks.sh
 
 The profile reduces harness pressure, but framework image builds can still need significant memory. Keep swap enabled during builds, stop unrelated services, and run frameworks sequentially. Use a larger dedicated host for comparative full-matrix publication.
 
+Each plaintext-capable adapter also runs bounded HTTP-Arena supplemental profiles: `http1_pipelining_16`, `connection_churn`, and `paced_plaintext`. The paced profile targets 100 requests per second per configured worker; it is a latency-under-load profile, not a peak-throughput ranking.
+
 The compatibility entry point delegates to the all-framework runner. It validates the host, builds the release orchestrator, then lets the orchestrator build, start, measure, and remove each selected libc image. Start the repository database yourself before selecting frameworks with database capabilities.
 
 ```sh
@@ -86,7 +88,9 @@ DATABASE_URL=postgres://benchmarkdbuser:benchmarkdbpass@127.0.0.1:5432/hello_wor
   scripts/run_benchmarks_all.sh
 ```
 
-Set `CONTAINER_RUNTIME`, `BENCHMARK_WORKERS`, `BENCHMARK_LIBCS`, `DATABASE_URL`, and `BENCHMARK_DATABASE_MANAGED` before invoking the script when the defaults do not fit the host. `BENCHMARK_IMAGE_PULL=1` and `BENCHMARK_NO_CACHE=1` make image refresh behavior explicit. Run the Autobahn conformance suite only against a running WebSocket target:
+Set `BENCHMARK_FRAMEWORK_FILTER` to an exact manifest name to run one adapter, for example `BENCHMARK_FRAMEWORK_FILTER=actix-web scripts/run_benchmarks_all.sh`.
+
+Set `CONTAINER_RUNTIME`, `BENCHMARK_WORKERS`, `BENCHMARK_LIBC`, `DATABASE_URL`, and `BENCHMARK_DATABASE_MANAGED` before invoking the script when the defaults do not fit the host. `BENCHMARK_IMAGE_PULL=1` and `BENCHMARK_NO_CACHE=1` make image refresh behavior explicit. Run the Autobahn conformance suite only against a running WebSocket target:
 
 ```sh
 AUTOBAHN_TARGET_URL=ws://127.0.0.1:8080/ws scripts/run_autobahn_suite.sh
@@ -94,7 +98,7 @@ AUTOBAHN_TARGET_URL=ws://127.0.0.1:8080/ws scripts/run_autobahn_suite.sh
 
 ## 5. Inspect, compare, and retain results
 
-Immutable JSON artifacts are stored under `results/data/YYYY/MM/`; the index is `results/index.json`, and generated tables/charts are in `results/`. Review the intended result diff before staging it:
+Immutable JSON artifacts are stored under `results/data/YYYY/MM/`; the index is `results/index.json`, and generated tables/charts are in `results/`. Each artifact records the Git revision, inspected local container image ID, and per-workload traffic settings. The orchestrator replaces the README block once per selected matrix so its tables only compare results from that invocation. Review the intended result diff before staging it:
 
 ```sh
 find results -type f | sort

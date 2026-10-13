@@ -1,6 +1,6 @@
 use common::result::{
-    LatencyDistribution, LibcVariant, MachineInfo, ResourceUsage, RunResult, StatusCodeCounts,
-    TestMetrics, deserialize_result, serialize_result_pretty,
+    LatencyDistribution, LibcVariant, MachineInfo, ResourceUsage, RunProvenance, RunResult,
+    StatusCodeCounts, TestMetrics, TrafficSettings, deserialize_result, serialize_result_pretty,
 };
 
 #[test]
@@ -19,6 +19,10 @@ fn test_roundtrip_result_serialization() {
             physical_cores: 96,
             logical_cores: 192,
             total_memory_mb: 262_144,
+        },
+        provenance: RunProvenance {
+            revision: "abc123".into(),
+            image_id: Some("sha256:abc123".into()),
         },
         benchmarks: vec![TestMetrics {
             category: "plaintext".into(),
@@ -52,12 +56,18 @@ fn test_roundtrip_result_serialization() {
                 http_5xx: 0,
                 errors: 0,
             },
+            traffic: TrafficSettings {
+                pipeline_depth: 1,
+                connection_mode: "keep_alive".into(),
+                target_rps: None,
+            },
         }],
     };
 
     let serialized = serialize_result_pretty(&result).expect("failed to serialize");
     assert!(serialized.contains("run-20261012-001"));
     assert!(serialized.contains("glibc"));
+    assert!(serialized.contains("sha256:abc123"));
 
     let deserialized = deserialize_result(&serialized).expect("failed to deserialize");
     assert_eq!(deserialized, result);

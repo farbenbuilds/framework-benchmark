@@ -11,6 +11,26 @@ pub fn discover_frameworks(
     Ok(discovered)
 }
 
+pub fn select_frameworks(
+    frameworks: Vec<(PathBuf, FrameworkManifest)>,
+    filter: &str,
+) -> Result<Vec<(PathBuf, FrameworkManifest)>, OrchestratorError> {
+    let filter = filter.trim();
+    if filter.is_empty() || filter == "all" {
+        return Ok(frameworks);
+    }
+    let selected: Vec<_> = frameworks
+        .into_iter()
+        .filter(|(_, manifest)| manifest.framework.name == filter)
+        .collect();
+    if selected.is_empty() {
+        return Err(OrchestratorError::Process(format!(
+            "no framework matches BENCHMARK_FRAMEWORK_FILTER={filter}"
+        )));
+    }
+    Ok(selected)
+}
+
 fn find_manifests_recursive(
     dir: &Path,
     results: &mut Vec<(PathBuf, FrameworkManifest)>,

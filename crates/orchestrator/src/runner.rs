@@ -3,8 +3,10 @@ use crate::lifecycle::run_framework_suite;
 use crate::poller::wait_for_ready;
 use crate::{start_container, stop_container};
 use common::manifest::FrameworkManifest;
-use common::result::{LibcVariant, RunResult};
-use reporter::archive::write_result_json;
+use common::result::{LibcVariant, RunProvenance, RunResult};
+use reporter::archive::{
+    timestamped_result_path, timestamped_result_relative_path, write_result_json,
+};
 use reporter::chart::generate_throughput_svg;
 use reporter::index::update_historical_index;
 use reporter::logic::aggregate_leaderboard;
@@ -57,6 +59,7 @@ pub async fn execute_framework_session(
     manifest: &FrameworkManifest,
     config: &BenchmarkSessionConfig,
 ) -> Result<RunResult, OrchestratorError> {
+    let revision = current_revision(framework_dir);
     let target = if config.manage_container {
         Some(start_container(
             framework_dir,
@@ -80,46 +83,97 @@ pub async fn execute_framework_session(
         let target_pid = target
             .as_ref()
             .map_or(config.target_pid, |target| Some(target.pid));
-        let result = run_framework_suite(
+        let cgroup_dir = target
+            .as_ref()
+            .and_then(|target| target.cgroup_dir.as_deref())
+            .or(config.cgroup_dir.as_deref());
+        let mut result = run_framework_suite(
             manifest,
             &target_addr,
             config.concurrency,
             config.duration_secs,
             config.libc,
             target_pid,
-            config.cgroup_dir.as_deref(),
+            cgroup_dir,
         )
         .await?;
+        result.provenance = RunProvenance {
+            revision,
+            image_id: target
+                .as_ref()
+                .map(|target| target.image_id.clone())
+                .or_else(|| std::env::var("BENCHMARK_IMAGE_ID").ok()),
+        };
         persist_session_results(&result, &config.output_dir)?;
         if let Some(readme) = &config.readme_path {
-            let _ = update_readme_leaderboard(Path::new(readme), std::slice::from_ref(&result));
+            update_readme_leaderboard(Path::new(readme), std::slice::from_ref(&result))?;
         }
         Ok(result)
     }
     .await;
-    if let Some(target) = &target {
-        stop_container(framework_dir, target);
+    let cleanup = match &target {
+        Some(target) => stop_container(framework_dir, &target.name),
+        None => Ok(()),
+    };
+    match (result, cleanup) {
+        (Err(error), _) | (Ok(_), Err(error)) => Err(error),
+        (Ok(result), Ok(())) => Ok(result),
     }
-    result
+}
+
+fn current_revision(framework_dir: &Path) -> String {
+    if let Ok(revision) = std::env::var("BENCHMARK_REVISION") {
+        if !revision.trim().is_empty() {
+            return revision;
+        }
+    }
+    std::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(framework_dir)
+        .output()
+        .ok()
+        .filter(|output| output.status.success())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|revision| revision.trim().into())
+        .filter(|revision: &String| !revision.is_empty())
+        .unwrap_or_else(|| "unknown".into())
 }
 
 fn persist_session_results(result: &RunResult, base_dir: &str) -> Result<(), OrchestratorError> {
     let base = Path::new(base_dir);
-    let run_file = format!("{}.json", result.run_id);
-    let json_path = base.join("data").join("current").join(&run_file);
+    let json_path = timestamped_result_path(base, result)?;
+    let relative_path = timestamped_result_relative_path(result)?;
     let index_path = base.join("index.json");
 
     write_result_json(&json_path, result)?;
-    update_historical_index(&index_path, result, json_path.to_str().unwrap_or_default())?;
-
-    let rows = aggregate_leaderboard(std::slice::from_ref(result), "plaintext");
-    let table = render_markdown_table(&rows, "plaintext");
-    let svg = generate_throughput_svg(&rows, "Plaintext Throughput Benchmark");
-
+    update_historical_index(
+        &index_path,
+        result,
+        relative_path
+            .to_str()
+            .ok_or_else(|| OrchestratorError::Process("result path must be valid UTF-8".into()))?,
+    )?;
     let charts_dir = base.join("charts");
     fs::create_dir_all(&charts_dir)?;
-    fs::write(charts_dir.join("plaintext_throughput.svg"), svg)?;
-    fs::write(base.join("leaderboard_plaintext.md"), table)?;
+    for category in categories(result) {
+        let rows = aggregate_leaderboard(std::slice::from_ref(result), &category);
+        let table = render_markdown_table(&rows, &category);
+        let title = format!("{category} Throughput Benchmark");
+        let svg = generate_throughput_svg(&rows, &title);
+        fs::write(charts_dir.join(format!("{category}_throughput.svg")), svg)?;
+        fs::write(base.join(format!("leaderboard_{category}.md")), table)?;
+    }
 
     Ok(())
+}
+
+fn categories(result: &RunResult) -> Vec<String> {
+    let mut categories: Vec<String> = result
+        .benchmarks
+        .iter()
+        .map(|benchmark| benchmark.category.clone())
+        .collect();
+    categories.sort_unstable();
+    categories.dedup();
+    categories
 }

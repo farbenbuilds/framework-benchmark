@@ -6,9 +6,30 @@ pub struct LeaderboardRow {
     pub framework: String,
     pub framework_version: String,
     pub libc: String,
+    pub concurrency: u32,
+    pub duration_secs: u32,
+    pub requests_total: u64,
     pub requests_per_sec: f64,
+    pub transfer_mb_per_sec: f64,
+    pub min_latency_ms: f64,
+    pub p50_latency_ms: f64,
+    pub p75_latency_ms: f64,
+    pub p90_latency_ms: f64,
     pub p99_latency_ms: f64,
+    pub p99_9_latency_ms: f64,
+    pub p99_99_latency_ms: f64,
+    pub max_latency_ms: f64,
+    pub latency_std_dev_ms: f64,
     pub peak_rss_mb: f64,
+    pub avg_rss_mb: f64,
+    pub cpu_user_pct: f32,
+    pub cpu_kernel_pct: f32,
+    pub context_switches: u64,
+    pub rapl_joules: Option<f64>,
+    pub http_2xx: u64,
+    pub http_4xx: u64,
+    pub http_5xx: u64,
+    pub errors: u64,
 }
 
 pub fn aggregate_leaderboard(results: &[RunResult], category: &str) -> Vec<LeaderboardRow> {
@@ -21,17 +42,35 @@ pub fn aggregate_leaderboard(results: &[RunResult], category: &str) -> Vec<Leade
                     common::result::LibcVariant::Glibc => "glibc",
                     common::result::LibcVariant::Musl => "musl",
                 };
-                let p99_ms = (test.latency.p99_us as f64) / 1000.0;
-                let rss_mb = (test.resources.peak_rss_bytes as f64) / (1024.0 * 1024.0);
-
                 entries.push(LeaderboardRow {
                     rank: 0,
                     framework: run.framework_name.clone(),
                     framework_version: run.framework_version.clone(),
                     libc: libc_str.into(),
+                    concurrency: test.concurrency,
+                    duration_secs: test.duration_secs,
+                    requests_total: test.requests_total,
                     requests_per_sec: test.requests_per_sec,
-                    p99_latency_ms: p99_ms,
-                    peak_rss_mb: rss_mb,
+                    transfer_mb_per_sec: test.transfer_mb_per_sec,
+                    min_latency_ms: microseconds_to_milliseconds(test.latency.min_us),
+                    p50_latency_ms: microseconds_to_milliseconds(test.latency.p50_us),
+                    p75_latency_ms: microseconds_to_milliseconds(test.latency.p75_us),
+                    p90_latency_ms: microseconds_to_milliseconds(test.latency.p90_us),
+                    p99_latency_ms: microseconds_to_milliseconds(test.latency.p99_us),
+                    p99_9_latency_ms: microseconds_to_milliseconds(test.latency.p99_9_us),
+                    p99_99_latency_ms: microseconds_to_milliseconds(test.latency.p99_99_us),
+                    max_latency_ms: microseconds_to_milliseconds(test.latency.max_us),
+                    latency_std_dev_ms: test.latency.std_dev_us / 1000.0,
+                    peak_rss_mb: bytes_to_megabytes(test.resources.peak_rss_bytes),
+                    avg_rss_mb: bytes_to_megabytes(test.resources.avg_rss_bytes),
+                    cpu_user_pct: test.resources.cpu_user_pct,
+                    cpu_kernel_pct: test.resources.cpu_kernel_pct,
+                    context_switches: test.resources.context_switches,
+                    rapl_joules: test.resources.rapl_joules,
+                    http_2xx: test.status_codes.http_2xx,
+                    http_4xx: test.status_codes.http_4xx,
+                    http_5xx: test.status_codes.http_5xx,
+                    errors: test.status_codes.errors,
                 });
             }
         }
@@ -51,4 +90,27 @@ pub fn aggregate_leaderboard(results: &[RunResult], category: &str) -> Vec<Leade
     }
 
     entries
+}
+
+fn microseconds_to_milliseconds(value: u64) -> f64 {
+    (value as f64) / 1000.0
+}
+
+fn bytes_to_megabytes(value: u64) -> f64 {
+    (value as f64) / (1024.0 * 1024.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{bytes_to_megabytes, microseconds_to_milliseconds};
+
+    #[test]
+    fn microseconds_to_milliseconds_preserves_fractional_values() {
+        assert!((microseconds_to_milliseconds(125) - 0.125).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn bytes_to_megabytes_converts_binary_megabytes() {
+        assert!((bytes_to_megabytes(2 * 1024 * 1024) - 2.0).abs() < f64::EPSILON);
+    }
 }

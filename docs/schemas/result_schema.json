@@ -10,6 +10,7 @@
     "libc",
     "timestamp_epoch_secs",
     "machine",
+    "provenance",
     "benchmarks"
   ],
   "properties": {
@@ -31,6 +32,14 @@
         "total_memory_mb": { "type": "integer", "minimum": 1 }
       }
     },
+    "provenance": {
+      "type": "object",
+      "required": ["revision", "image_id"],
+      "properties": {
+        "revision": { "type": "string", "minLength": 1 },
+        "image_id": { "type": ["string", "null"] }
+      }
+    },
     "benchmarks": {
       "type": "array",
       "items": {
@@ -44,7 +53,8 @@
           "transfer_mb_per_sec",
           "latency",
           "resources",
-          "status_codes"
+          "status_codes",
+          "traffic"
         ],
         "properties": {
           "category": { "type": "string" },
@@ -88,6 +98,15 @@
               "http_4xx": { "type": "integer" },
               "http_5xx": { "type": "integer" },
               "errors": { "type": "integer" }
+            }
+          },
+          "traffic": {
+            "type": "object",
+            "required": ["pipeline_depth", "connection_mode", "target_rps"],
+            "properties": {
+              "pipeline_depth": { "type": "integer", "minimum": 1 },
+              "connection_mode": { "type": "string", "enum": ["keep_alive", "churn"] },
+              "target_rps": { "type": ["integer", "null"], "minimum": 1 }
             }
           }
         }

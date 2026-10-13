@@ -1,7 +1,6 @@
 use crate::error::ReporterError;
+use crate::storage::write_new_file;
 use common::result::RunResult;
-use std::fs::{self, OpenOptions};
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 pub fn timestamped_result_path(
@@ -29,17 +28,8 @@ pub fn timestamped_result_relative_path(result: &RunResult) -> Result<PathBuf, R
 }
 
 pub fn write_result_json(output_path: &Path, result: &RunResult) -> Result<(), ReporterError> {
-    if let Some(parent) = output_path.parent() {
-        fs::create_dir_all(parent)?;
-    }
     let json = common::result::serialize_result_pretty(result)?;
-    let mut file = OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(output_path)?;
-    file.write_all(json.as_bytes())?;
-    file.sync_all()?;
-    Ok(())
+    write_new_file(output_path, json.as_bytes())
 }
 
 fn valid_run_id(run_id: &str) -> bool {

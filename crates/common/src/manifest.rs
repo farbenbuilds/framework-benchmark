@@ -66,6 +66,8 @@ pub struct BuildConfig {
 pub struct RuntimeConfig {
     pub port: u16,
     pub healthcheck_path: String,
+    #[serde(default)]
+    pub websocket_path: Option<String>,
     #[serde(default = "default_startup_timeout")]
     pub startup_timeout_seconds: u64,
     pub shutdown_signal: Option<String>,
@@ -109,6 +111,15 @@ pub fn validate_manifest(m: &FrameworkManifest) -> Result<(), CommonError> {
     if !m.runtime.healthcheck_path.starts_with('/') {
         return Err(CommonError::Validation(
             "healthcheck_path must start with '/'".into(),
+        ));
+    }
+    if m.runtime
+        .websocket_path
+        .as_deref()
+        .is_some_and(|path| !path.starts_with('/'))
+    {
+        return Err(CommonError::Validation(
+            "websocket_path must start with '/'".into(),
         ));
     }
     if m.build.engine != "docker" && m.build.engine != "nix" {
