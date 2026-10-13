@@ -1,8 +1,8 @@
 [framework]
 name = "swerver"
-version = "0.1.0"
+version = "0.1.0-alpha.34"
 language = "zig"
-language_version = "0.13.0"
+language_version = "0.16.0"
 website = "https://github.com/justinGrosvenor/swerver"
 category = "web-server"
 tier = "micro"
