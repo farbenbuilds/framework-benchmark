@@ -33,3 +33,11 @@ pub fn parse_status_switches(content: &str) -> (u64, u64) {
     }
     (vol, invol)
 }
+
+pub fn parse_stat_times(content: &str) -> Option<(u64, u64)> {
+    let (_, fields) = content.rsplit_once(") ")?;
+    let mut fields = fields.split_whitespace();
+    let user = fields.nth(11)?.parse().ok()?;
+    let kernel = fields.next()?.parse().ok()?;
+    Some((user, kernel))
+}

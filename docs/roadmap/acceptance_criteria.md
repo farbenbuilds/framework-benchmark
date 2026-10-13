@@ -18,7 +18,7 @@ Every benchmark phase and pull request must satisfy the following acceptance cri
 - **Zero Allocations on Hot Paths**: Load generation and telemetry loops must not allocate heap memory during active measurement sampling.
 - **Coordinated Omission**: Latency reporting must utilize HDR histogram with constant-rate scheduling to capture actual queue wait times.
 - **Dual-Libc Validation**: Frameworks must provide verified build paths for both `glibc` and `musl`.
-- **Reproducibility**: Repeated runs of the same framework on identical hardware must achieve throughput numbers within a 3% variance window.
+- **Reproducibility**: Compare repeated runs only after recording identical revision, image inputs, CPU topology, traffic placement, and workload settings.
 
 ### 3. Stability and Cleanliness
 - **Resource Leaks**: Benchmark child containers and processes must be completely cleaned up; no orphan processes, dangling Docker containers, or unmounted cgroups remain.

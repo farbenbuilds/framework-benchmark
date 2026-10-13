@@ -6,7 +6,11 @@ use tokio::net::TcpListener;
 
 #[tokio::test]
 async fn test_lifecycle_suite_execution() {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = match TcpListener::bind("127.0.0.1:0").await {
+        Ok(listener) => listener,
+        Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => return,
+        Err(error) => panic!("bind local test server: {error}"),
+    };
     let addr = listener.local_addr().unwrap();
 
     let server_handle = tokio::spawn(async move {

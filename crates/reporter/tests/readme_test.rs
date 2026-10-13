@@ -2,7 +2,7 @@ use common::result::{
     LatencyDistribution, LibcVariant, MachineInfo, ResourceUsage, RunResult, StatusCodeCounts,
     TestMetrics,
 };
-use reporter::update_readme_leaderboard;
+use reporter::{render_readme_leaderboards, update_readme_leaderboard};
 use std::fs;
 
 fn create_sample_run(name: &str, category: &str, rps: f64) -> RunResult {
@@ -73,5 +73,32 @@ fn test_update_readme_leaderboard() {
     assert!(updated.contains("axum"));
     assert!(updated.contains("450000.00"));
 
+    let _ = fs::remove_dir_all(temp_dir);
+}
+
+#[test]
+fn test_render_readme_leaderboards_includes_complete_batch() {
+    let first = create_sample_run("axum", "plaintext", 450_000.0);
+    let second = create_sample_run("actix", "websocket", 400_000.0);
+
+    let rendered = render_readme_leaderboards(&[first, second]);
+
+    assert!(rendered.contains("axum") && rendered.contains("actix"));
+}
+
+#[test]
+fn test_update_readme_leaderboard_preserves_existing_output_for_empty_batch() {
+    let temp_dir = std::env::temp_dir().join("bench_readme_empty_batch_test");
+    fs::create_dir_all(&temp_dir).expect("create test dir failed");
+    let readme_path = temp_dir.join("README.md");
+    let initial = "<!-- BENCHMARK_RESULTS_START -->\nold\n<!-- BENCHMARK_RESULTS_END -->\n";
+    fs::write(&readme_path, initial).expect("write initial readme failed");
+
+    update_readme_leaderboard(&readme_path, &[]).expect("empty batch must not fail");
+
+    assert_eq!(
+        fs::read_to_string(&readme_path).expect("read updated readme failed"),
+        initial
+    );
     let _ = fs::remove_dir_all(temp_dir);
 }

@@ -1,10 +1,11 @@
 use collector::aggregator::HarvestAggregator;
 use collector::cgroups::{parse_cgroup_cpu_stat, parse_cgroup_memory_stat};
-use collector::procfs::{parse_statm, parse_status_switches};
+use collector::procfs::{parse_stat_times, parse_statm, parse_status_switches};
 use collector::{
     EbpfMetrics, PerfMode, energy_delta_uj, page_cache_hit_ratio, parse_ebpf_metrics,
     parse_perf_event_paranoid, select_perf_mode,
 };
+use common::result::ResourceUsage;
 
 #[test]
 fn test_parse_procfs_statm() {
@@ -20,6 +21,12 @@ fn test_parse_procfs_status_switches() {
     let (vol, invol) = parse_status_switches(status_sample);
     assert_eq!(vol, 1234);
     assert_eq!(invol, 56);
+}
+
+#[test]
+fn test_parse_procfs_stat_times() {
+    let stat = "42 (server worker) S 0 0 0 0 0 0 0 0 0 0 12 34 0 0 0\n";
+    assert_eq!(parse_stat_times(stat), Some((12, 34)));
 }
 
 #[test]
@@ -70,4 +77,33 @@ fn test_ebpf_metric_parsing() {
     assert_eq!(metrics.off_cpu_usec, 10);
     assert_eq!(page_cache_hit_ratio(metrics), Some(0.8));
     assert_eq!(page_cache_hit_ratio(EbpfMetrics::default()), None);
+}
+
+#[test]
+fn test_runtime_counter_delta() {
+    let mut usage = ResourceUsage {
+        peak_rss_bytes: 0,
+        avg_rss_bytes: 0,
+        cpu_user_pct: 0.0,
+        cpu_kernel_pct: 0.0,
+        context_switches: 0,
+        rapl_joules: None,
+    };
+    collector::metrics::apply_runtime_counters(
+        &mut usage,
+        collector::metrics::RuntimeCounters {
+            user_usec: 10,
+            kernel_usec: 20,
+            context_switches: 30,
+        },
+        collector::metrics::RuntimeCounters {
+            user_usec: 510,
+            kernel_usec: 270,
+            context_switches: 42,
+        },
+        1_000,
+    );
+    assert!((usage.cpu_user_pct - 50.0).abs() < f32::EPSILON);
+    assert!((usage.cpu_kernel_pct - 25.0).abs() < f32::EPSILON);
+    assert_eq!(usage.context_switches, 12);
 }

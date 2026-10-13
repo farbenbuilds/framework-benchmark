@@ -18,6 +18,28 @@ pub struct IndexEntry {
     pub relative_json_path: String,
 }
 
+fn historical_index_entry(result: &RunResult, relative_path: &str) -> IndexEntry {
+    IndexEntry {
+        run_id: result.run_id.clone(),
+        framework_name: result.framework_name.clone(),
+        libc: libc_name(result.libc).into(),
+        timestamp_epoch_secs: result.timestamp_epoch_secs,
+        relative_json_path: relative_path.into(),
+    }
+}
+
+fn upsert_historical_index(index: &mut HistoricalIndex, entry: IndexEntry) {
+    if let Some(current) = index
+        .runs
+        .iter_mut()
+        .find(|current| current.run_id == entry.run_id)
+    {
+        *current = entry;
+        return;
+    }
+    index.runs.push(entry);
+}
+
 pub fn update_historical_index(
     index_file_path: &Path,
     result: &RunResult,
@@ -25,7 +47,8 @@ pub fn update_historical_index(
 ) -> Result<(), ReporterError> {
     let mut index: HistoricalIndex = if index_file_path.exists() {
         let content = fs::read_to_string(index_file_path)?;
-        serde_json::from_str(&content).unwrap_or_default()
+        serde_json::from_str(&content)
+            .map_err(|error| ReporterError::Formatting(format!("failed to parse index: {error}")))?
     } else {
         if let Some(parent) = index_file_path.parent() {
             fs::create_dir_all(parent)?;
@@ -33,21 +56,17 @@ pub fn update_historical_index(
         HistoricalIndex::default()
     };
 
-    let libc_str = match result.libc {
-        common::result::LibcVariant::Glibc => "glibc",
-        common::result::LibcVariant::Musl => "musl",
-    };
-
-    index.runs.push(IndexEntry {
-        run_id: result.run_id.clone(),
-        framework_name: result.framework_name.clone(),
-        libc: libc_str.into(),
-        timestamp_epoch_secs: result.timestamp_epoch_secs,
-        relative_json_path: relative_path.into(),
-    });
+    upsert_historical_index(&mut index, historical_index_entry(result, relative_path));
 
     let serialized = serde_json::to_string_pretty(&index)
         .map_err(|e| ReporterError::Formatting(format!("failed to serialize index: {e}")))?;
     fs::write(index_file_path, serialized)?;
     Ok(())
+}
+
+fn libc_name(libc: common::result::LibcVariant) -> &'static str {
+    match libc {
+        common::result::LibcVariant::Glibc => "glibc",
+        common::result::LibcVariant::Musl => "musl",
+    }
 }

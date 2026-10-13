@@ -2,6 +2,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum LoadGenError {
+    #[error("invalid benchmark plan: {0}")]
+    InvalidPlan(String),
+
     #[error("network I/O error: {0}")]
     Io(#[from] std::io::Error),
 

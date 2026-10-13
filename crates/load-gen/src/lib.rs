@@ -3,7 +3,9 @@ pub mod client;
 pub mod engine;
 pub mod error;
 pub mod histogram;
+mod io;
 pub mod plan;
+mod response;
 pub mod stats;
 
 pub use engine::{BenchmarkExecutionResult, execute_benchmark};
