@@ -31,7 +31,7 @@ jobs:
       - name: Compile framework sources
         shell: bash
         run: |
-          rg --files frameworks/web-server/java -g pom.xml | while read -r manifest; do
+          find frameworks/web-server/java -name pom.xml -print0 | while IFS= read -r -d '' manifest; do
             module=$(dirname "$manifest")
             (cd "$module" && mvn -B -q -DskipTests package)
           done

@@ -28,11 +28,11 @@ jobs:
           check-latest: false
           cache-dependency-path: frameworks/web-server/go/*/go.mod
       - name: Check formatting
-        run: test -z "$(rg --files frameworks/web-server/go -g '*.go' | xargs gofmt -l)"
+        run: test -z "$(find frameworks/web-server/go -name '*.go' -print0 | xargs -0 gofmt -l)"
       - name: Run vet
         shell: bash
         run: |
-          rg --files frameworks/web-server/go -g go.mod | while read -r manifest; do
+          find frameworks/web-server/go -name go.mod -print0 | while IFS= read -r -d '' manifest; do
             module=$(dirname "$manifest")
             (cd "$module" && go vet ./...)
           done

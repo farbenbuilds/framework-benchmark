@@ -12,36 +12,45 @@ JSON_HEADERS = (
     (b"content-length", str(len(JSON_RESP)).encode("ascii")),
 )
 
+
 async def app(scope, receive, send):
     if scope["type"] != "http":
         return
 
     path = scope["path"]
     if path == "/healthz":
-        await send({
-            "type": "http.response.start",
-            "status": 200,
-            "headers": EMPTY_HEADERS,
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": EMPTY_HEADERS,
+            }
+        )
         await send({"type": "http.response.body", "body": b""})
     elif path == "/plaintext":
-        await send({
-            "type": "http.response.start",
-            "status": 200,
-            "headers": PLAINTEXT_HEADERS,
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": PLAINTEXT_HEADERS,
+            }
+        )
         await send({"type": "http.response.body", "body": PLAINTEXT_RESP})
     elif path == "/json":
-        await send({
-            "type": "http.response.start",
-            "status": 200,
-            "headers": JSON_HEADERS,
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": JSON_HEADERS,
+            }
+        )
         await send({"type": "http.response.body", "body": JSON_RESP})
     else:
-        await send({
-            "type": "http.response.start",
-            "status": 404,
-            "headers": EMPTY_HEADERS,
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 404,
+                "headers": EMPTY_HEADERS,
+            }
+        )
         await send({"type": "http.response.body", "body": b""})

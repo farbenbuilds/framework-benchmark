@@ -1,12 +1,24 @@
-name: Lint
+name: Lint Rust Workspace
 
 on:
   push:
     branches:
       - main
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - crates/**
+      - scripts/check_conventions.sh
+      - .github/workflows/lint.yml
   pull_request:
     branches:
       - main
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - crates/**
+      - scripts/check_conventions.sh
+      - .github/workflows/lint.yml
   workflow_dispatch:
 
 jobs:
