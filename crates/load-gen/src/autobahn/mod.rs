@@ -2,6 +2,7 @@ pub mod builder;
 pub mod echo;
 pub mod frame;
 pub mod fuzz;
+mod handshake;
 pub mod runner;
 
 pub use builder::FrameBuilder;

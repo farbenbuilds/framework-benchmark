@@ -3,9 +3,10 @@ use crate::autobahn::echo::validate_echo_frame;
 use crate::autobahn::frame::{
     FrameOpcode, MAX_FRAME_HEADER_BYTES, MAX_FRAME_PAYLOAD_BYTES, parse_frame_header,
 };
+use crate::autobahn::handshake::perform_handshake;
 use crate::error::LoadGenError;
 use crate::histogram::LatencyRecorder;
-use crate::io::{read_until, write_until};
+use crate::io::{connect_until, read_until, write_until};
 use crate::stats::WorkerStats;
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -15,24 +16,6 @@ use tokio::net::TcpStream;
 pub struct AutobahnSuiteRunner;
 
 impl AutobahnSuiteRunner {
-    pub async fn perform_handshake(
-        stream: &mut TcpStream,
-        addr: &str,
-        path: &str,
-    ) -> Result<(), LoadGenError> {
-        let req = format!(
-            "GET {path} HTTP/1.1\r\nHost: {addr}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"
-        );
-        stream.write_all(req.as_bytes()).await?;
-
-        let mut buf = vec![0u8; 1024];
-        let n = stream.read(&mut buf).await?;
-        if n == 0 || !buf[..n].starts_with(b"HTTP/1.1 101") {
-            return Err(LoadGenError::Protocol("handshake upgrade rejected".into()));
-        }
-        Ok(())
-    }
-
     pub async fn test_echo_message(
         stream: &mut TcpStream,
         text: &str,
@@ -63,15 +46,15 @@ impl AutobahnSuiteRunner {
         recorder: &mut LatencyRecorder,
         stats: &mut WorkerStats,
     ) -> Result<(), LoadGenError> {
-        let mut stream = match TcpStream::connect(addr).await {
+        let mut stream = match connect_until(addr, deadline).await {
             Ok(stream) => stream,
             Err(error) => {
                 stats.record_error();
-                return Err(error.into());
+                return Err(error);
             }
         };
         let _ = stream.set_nodelay(true);
-        if let Err(error) = Self::perform_handshake(&mut stream, addr, path).await {
+        if let Err(error) = perform_handshake(&mut stream, addr, path, deadline).await {
             stats.record_error();
             return Err(error);
         }
