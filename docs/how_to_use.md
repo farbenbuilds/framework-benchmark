@@ -62,6 +62,16 @@ In another shell, wait for `/healthz` and make a single request to `/plaintext`.
 
 ## 4. Run benchmarks
 
+### Small OpenStack instances
+
+For a 2-vCPU, 8-GB VM, enable the bounded profile. It uses eight load workers and ten-second measurements instead of the normal host-derived concurrency and 30-second window, and starts each target with one CPU, 2 GB memory, and a 128-process container limit. Start with one libc and one framework smoke run; do not run the full matrix until the instance remains stable.
+
+```sh
+BENCHMARK_SMALL_HOST=1 BENCHMARK_LIBC=glibc scripts/run_benchmarks.sh
+```
+
+The profile reduces harness pressure, but framework image builds can still need significant memory. Keep swap enabled during builds, stop unrelated services, and run frameworks sequentially. Use a larger dedicated host for comparative full-matrix publication.
+
 The compatibility entry point delegates to the all-framework runner. It validates the host, builds the release orchestrator, then lets the orchestrator build, start, measure, and remove each selected libc image. Start the repository database yourself before selecting frameworks with database capabilities.
 
 ```sh

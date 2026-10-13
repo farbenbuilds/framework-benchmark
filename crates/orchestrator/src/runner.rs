@@ -28,10 +28,11 @@ pub struct BenchmarkSessionConfig {
 
 impl Default for BenchmarkSessionConfig {
     fn default() -> Self {
+        let small_host = std::env::var("BENCHMARK_SMALL_HOST").is_ok_and(|value| value == "1");
         Self {
             target_host: "127.0.0.1".into(),
-            concurrency: 64,
-            duration_secs: 30,
+            concurrency: default_concurrency(small_host),
+            duration_secs: if small_host { 10 } else { 30 },
             libc: LibcVariant::Glibc,
             output_dir: "results".into(),
             readme_path: Some("README.md".into()),
@@ -41,6 +42,14 @@ impl Default for BenchmarkSessionConfig {
             manage_container: true,
         }
     }
+}
+
+fn default_concurrency(small_host: bool) -> u32 {
+    if small_host {
+        return 8;
+    }
+    let cpus = std::thread::available_parallelism().map_or(1, usize::from);
+    u32::try_from(cpus.saturating_mul(4).clamp(4, 64)).unwrap_or(64)
 }
 
 pub async fn execute_framework_session(
