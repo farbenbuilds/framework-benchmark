@@ -7,12 +7,11 @@ use reporter::archive::{
 };
 use reporter::chart::generate_throughput_svg;
 use reporter::index::{HistoricalIndex, update_historical_index};
-use reporter::logic::aggregate_leaderboard;
-use reporter::markdown::render_markdown_table;
+use reporter::logic::{aggregate_leaderboard, dual_libc_deltas};
+use reporter::markdown::{render_markdown_table, render_markdown_table_with_deltas};
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
-
 fn create_dummy_run(name: &str, libc: LibcVariant, rps: f64, p99_us: u64) -> RunResult {
     RunResult {
         run_id: "test-run".into(),
@@ -65,7 +64,6 @@ fn create_dummy_run(name: &str, libc: LibcVariant, rps: f64, p99_us: u64) -> Run
         }],
     }
 }
-
 fn temporary_dir(label: &str) -> PathBuf {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -78,41 +76,34 @@ fn temporary_dir(label: &str) -> PathBuf {
     fs::create_dir_all(&path).expect("create test directory failed");
     path
 }
-
 #[test]
 fn test_leaderboard_ranking_and_markdown() {
     let r1 = create_dummy_run("axum", LibcVariant::Glibc, 500_000.0, 500);
     let r2 = create_dummy_run("nethttp", LibcVariant::Musl, 400_000.0, 800);
-
     let rows = aggregate_leaderboard(&[r2, r1], "plaintext");
     assert_eq!(rows.len(), 2);
-    assert_eq!(rows[0].framework, "axum");
-    assert_eq!(rows[0].rank, 1);
-    assert_eq!(rows[1].framework, "nethttp");
-    assert_eq!(rows[1].rank, 2);
-
+    assert_eq!((rows[0].framework.as_str(), rows[0].rank), ("axum", 1));
+    assert_eq!((rows[1].framework.as_str(), rows[1].rank), ("nethttp", 2));
     let markdown = render_markdown_table(&rows, "plaintext");
     assert!(markdown.contains("axum"));
     assert!(markdown.contains("500000.00"));
 }
-
 #[test]
 fn test_svg_chart_generation() {
     let r1 = create_dummy_run("axum", LibcVariant::Glibc, 500_000.0, 500);
     let rows = aggregate_leaderboard(&[r1], "plaintext");
     let svg = generate_throughput_svg(&rows, "Plaintext Throughput");
-
     assert!(svg.contains("<svg"));
     assert!(svg.contains("axum-glibc"));
-    assert!(svg.contains("500000 req/s"));
+    assert!(
+        svg.contains("500000.000 req/s") && svg.contains("P99 latency") && svg.contains("0.500 ms")
+    );
     assert!(svg.ends_with("</svg>\n"));
 }
-
 #[test]
 fn test_historical_index_update() {
     let temp_dir = temporary_dir("index");
     let index_file = temp_dir.join("index.json");
-
     let r1 = create_dummy_run("axum", LibcVariant::Glibc, 500_000.0, 500);
     update_historical_index(&index_file, &r1, "results/data/2026/10/test-run.json")
         .expect("update index failed");
@@ -122,18 +113,15 @@ fn test_historical_index_update() {
         "results/data/2026/10/retried-test-run.json",
     )
     .expect("repeat index update failed");
-
     let content = fs::read_to_string(&index_file).expect("read index failed");
     let index: HistoricalIndex = serde_json::from_str(&content).expect("parse index failed");
-    assert_eq!(
-        index.runs.len(),
-        1,
-        "the same run id must not duplicate history"
-    );
-    assert_eq!(index.runs[0].framework_name, "axum");
-    assert_eq!(index.runs[0].libc, "glibc");
+    assert_eq!(index.runs.len(), 2, "colliding run ids must append history");
     assert_eq!(
         index.runs[0].relative_json_path,
+        "results/data/2026/10/test-run.json"
+    );
+    assert_eq!(
+        index.runs[1].relative_json_path,
         "results/data/2026/10/retried-test-run.json"
     );
 
@@ -183,4 +171,30 @@ fn test_timestamped_artifact_path_rejects_unsafe_run_id() {
     let error = timestamped_result_relative_path(&run).expect_err("unsafe run id must fail");
 
     assert!(error.to_string().contains("run id"));
+}
+
+#[test]
+fn test_dual_libc_deltas_require_compatible_provenance() {
+    let mut glibc = create_dummy_run("axum", LibcVariant::Glibc, 500_000.0, 500);
+    glibc.provenance = RunProvenance {
+        revision: "abc123".into(),
+        image_id: Some("glibc-image".into()),
+        framework_input_sha256: Some("inputs".into()),
+        target_cpus: Some("0-3".into()),
+        load_cpus: Some("4-7".into()),
+        ..RunProvenance::default()
+    };
+    let mut musl = glibc.clone();
+    musl.libc = LibcVariant::Musl;
+    musl.provenance.image_id = Some("musl-image".into());
+    musl.benchmarks[0].requests_per_sec = 550_000.0;
+    musl.benchmarks[0].latency.p99_us = 600;
+
+    let rows = aggregate_leaderboard(&[glibc.clone(), musl.clone()], "plaintext");
+    let deltas = dual_libc_deltas(&[glibc.clone(), musl.clone()], "plaintext");
+    assert_eq!(deltas[0].requests_per_sec_change_pct, Some(10.0));
+    assert!(render_markdown_table_with_deltas(&rows, &deltas, "plaintext").contains("+20.00%"));
+
+    musl.provenance.framework_input_sha256 = Some("different".into());
+    assert!(dual_libc_deltas(&[glibc, musl], "plaintext").is_empty());
 }

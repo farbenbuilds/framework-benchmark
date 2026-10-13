@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim AS builder
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS builder
 WORKDIR /usr/src/app
 RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl git xz-utils zlib1g-dev && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
@@ -6,7 +6,7 @@ RUN git init /opt/swerver && git -C /opt/swerver remote add origin https://githu
 COPY src/main.zig /opt/swerver/src/main.zig
 RUN cd /opt/swerver && zig build -Doptimize=ReleaseFast
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 WORKDIR /app
 RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /opt/swerver/zig-out/bin/swerver /app/server

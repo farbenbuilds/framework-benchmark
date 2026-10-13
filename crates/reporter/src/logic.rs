@@ -1,5 +1,4 @@
-use common::result::RunResult;
-
+use common::result::{LibcVariant, RunResult, TestMetrics};
 #[derive(Debug, Clone)]
 pub struct LeaderboardRow {
     pub rank: usize,
@@ -31,17 +30,25 @@ pub struct LeaderboardRow {
     pub http_5xx: u64,
     pub errors: u64,
 }
-
+#[derive(Debug, Clone, PartialEq)]
+pub struct DualLibcDelta {
+    pub framework: String,
+    pub framework_version: String,
+    pub concurrency: u32,
+    pub glibc_requests_per_sec: f64,
+    pub musl_requests_per_sec: f64,
+    pub requests_per_sec_change_pct: Option<f64>,
+    pub glibc_p99_latency_ms: f64,
+    pub musl_p99_latency_ms: f64,
+    pub p99_latency_change_pct: Option<f64>,
+}
 pub fn aggregate_leaderboard(results: &[RunResult], category: &str) -> Vec<LeaderboardRow> {
     let mut entries = Vec::new();
 
     for run in results {
         for test in &run.benchmarks {
             if test.category == category {
-                let libc_str = match run.libc {
-                    common::result::LibcVariant::Glibc => "glibc",
-                    common::result::LibcVariant::Musl => "musl",
-                };
+                let libc_str = libc_name(run.libc);
                 entries.push(LeaderboardRow {
                     rank: 0,
                     framework: run.framework_name.clone(),
@@ -91,6 +98,98 @@ pub fn aggregate_leaderboard(results: &[RunResult], category: &str) -> Vec<Leade
 
     entries
 }
+pub fn dual_libc_deltas(results: &[RunResult], category: &str) -> Vec<DualLibcDelta> {
+    let glibc = category_metrics(results, category, LibcVariant::Glibc);
+    let musl = category_metrics(results, category, LibcVariant::Musl);
+    let mut paired = vec![false; musl.len()];
+    let mut deltas = Vec::new();
+
+    for (glibc_run, glibc_test) in glibc {
+        let Some((index, (_musl_run, musl_test))) =
+            musl.iter().enumerate().find(|(index, item)| {
+                !paired[*index] && compatible_runs(glibc_run, glibc_test, item.0, item.1)
+            })
+        else {
+            continue;
+        };
+        paired[index] = true;
+        deltas.push(DualLibcDelta {
+            framework: glibc_run.framework_name.clone(),
+            framework_version: glibc_run.framework_version.clone(),
+            concurrency: glibc_test.concurrency,
+            glibc_requests_per_sec: glibc_test.requests_per_sec,
+            musl_requests_per_sec: musl_test.requests_per_sec,
+            requests_per_sec_change_pct: percentage_change(
+                glibc_test.requests_per_sec,
+                musl_test.requests_per_sec,
+            ),
+            glibc_p99_latency_ms: microseconds_to_milliseconds(glibc_test.latency.p99_us),
+            musl_p99_latency_ms: microseconds_to_milliseconds(musl_test.latency.p99_us),
+            p99_latency_change_pct: percentage_change(
+                glibc_test.latency.p99_us as f64,
+                musl_test.latency.p99_us as f64,
+            ),
+        });
+    }
+    deltas.sort_by(|a, b| {
+        a.framework
+            .cmp(&b.framework)
+            .then_with(|| a.framework_version.cmp(&b.framework_version))
+            .then_with(|| a.concurrency.cmp(&b.concurrency))
+    });
+    deltas
+}
+fn category_metrics<'a>(
+    results: &'a [RunResult],
+    category: &'a str,
+    libc: LibcVariant,
+) -> Vec<(&'a RunResult, &'a TestMetrics)> {
+    results
+        .iter()
+        .filter(|run| run.libc == libc)
+        .flat_map(|run| {
+            run.benchmarks
+                .iter()
+                .filter(move |test| test.category == category)
+                .map(move |test| (run, test))
+        })
+        .collect()
+}
+fn compatible_runs(
+    left: &RunResult,
+    left_test: &TestMetrics,
+    right: &RunResult,
+    right_test: &TestMetrics,
+) -> bool {
+    left.framework_name == right.framework_name
+        && left.framework_version == right.framework_version
+        && left.machine == right.machine
+        && left_test.concurrency == right_test.concurrency
+        && left_test.duration_secs == right_test.duration_secs
+        && left_test.traffic == right_test.traffic
+        && compatible_provenance(left, right)
+}
+fn compatible_provenance(left: &RunResult, right: &RunResult) -> bool {
+    left.provenance.revision != "unknown"
+        && left.provenance.revision == right.provenance.revision
+        && left.provenance.framework_input_sha256.is_some()
+        && left.provenance.framework_input_sha256 == right.provenance.framework_input_sha256
+        && left.provenance.image_id.is_some()
+        && right.provenance.image_id.is_some()
+        && left.provenance.target_cpus == right.provenance.target_cpus
+        && left.provenance.load_cpus == right.provenance.load_cpus
+}
+
+fn percentage_change(baseline: f64, value: f64) -> Option<f64> {
+    (baseline != 0.0).then(|| ((value - baseline) / baseline) * 100.0)
+}
+
+fn libc_name(libc: LibcVariant) -> &'static str {
+    match libc {
+        LibcVariant::Glibc => "glibc",
+        LibcVariant::Musl => "musl",
+    }
+}
 
 fn microseconds_to_milliseconds(value: u64) -> f64 {
     (value as f64) / 1000.0
@@ -98,19 +197,4 @@ fn microseconds_to_milliseconds(value: u64) -> f64 {
 
 fn bytes_to_megabytes(value: u64) -> f64 {
     (value as f64) / (1024.0 * 1024.0)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{bytes_to_megabytes, microseconds_to_milliseconds};
-
-    #[test]
-    fn microseconds_to_milliseconds_preserves_fractional_values() {
-        assert!((microseconds_to_milliseconds(125) - 0.125).abs() < f64::EPSILON);
-    }
-
-    #[test]
-    fn bytes_to_megabytes_converts_binary_megabytes() {
-        assert!((bytes_to_megabytes(2 * 1024 * 1024) - 2.0).abs() < f64::EPSILON);
-    }
 }

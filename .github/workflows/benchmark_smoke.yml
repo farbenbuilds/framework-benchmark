@@ -1,0 +1,49 @@
+name: Benchmark Smoke
+
+on:
+  pull_request:
+    paths:
+      - frameworks/**
+      - templates/docker/**
+      - scripts/**
+      - flake.nix
+      - .github/workflows/benchmark_smoke.yml
+  push:
+    branches: [main]
+    paths:
+      - frameworks/**
+      - templates/docker/**
+      - scripts/**
+      - flake.nix
+      - .github/workflows/benchmark_smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Dual-libc cpeak health smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build and exercise both variants
+        shell: bash
+        working-directory: frameworks/web-server/rust/cpeak
+        run: |
+          set -euo pipefail
+          for libc in glibc musl; do
+            image="benchmark-smoke:cpeak-${libc}"
+            name="benchmark-smoke-${libc}"
+            docker build --file "Dockerfile.${libc}" --tag "$image" .
+            docker run --detach --rm --network host --name "$name" "$image"
+            for _ in $(seq 1 20); do
+              curl --fail --silent --show-error http://127.0.0.1:8080/healthz && break
+              sleep 1
+            done
+            test "$(curl --fail --silent http://127.0.0.1:8080/plaintext)" = 'Hello, World!'
+            docker stop --time 5 "$name"
+          done

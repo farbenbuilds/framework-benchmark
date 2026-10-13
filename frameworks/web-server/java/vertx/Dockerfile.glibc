@@ -1,10 +1,10 @@
-FROM maven:3.9-eclipse-temurin-21-jammy AS build
+FROM maven:3.9-eclipse-temurin-21-jammy@sha256:7f8422bd81f19b9035007a75e2f82272b09af64db08848d7d4e93302466e8b6f AS build
 WORKDIR /src
 COPY pom.xml ./
 COPY Main.java ./src/main/java/Main.java
 RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:21-jre-jammy@sha256:f04fb34e053148344e83317976114ec3f37e4b830ec8bdab5a2fe3cecd7d010b
 WORKDIR /app
 COPY --from=build /src/target/vertx-benchmark-0.1.0.jar /app/app.jar
 EXPOSE 8080

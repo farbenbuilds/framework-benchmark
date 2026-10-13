@@ -1,4 +1,4 @@
-FROM php:8.3-cli-alpine3.21
+FROM php:8.3-cli-alpine3.21@sha256:f0d5ab7d92c640584a6d885beed40b50764a2d4ded02ec26be144cc238db61db
 RUN apk add --no-cache autoconf gcc g++ make linux-headers openssl-dev
 RUN pecl install swoole && docker-php-ext-enable swoole
 WORKDIR /app

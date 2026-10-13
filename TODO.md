@@ -24,7 +24,7 @@ The Docker-based dual-libc baseline is implemented, but a result is publishable 
 3. **Phase 2: Dual-Libc Infrastructure & Engine Core**: [docs/roadmap/phase2_load_engine.md](docs/roadmap/phase2_load_engine.md) [Completed]
    - Nix flakes, Docker multi-stage templates, Tokio/Httparse load generator, and cgroups v2 harvester.
 4. **Phase 3: Framework Registry & Baseline Implementations**: [docs/roadmap/phase3_frameworks.md](docs/roadmap/phase3_frameworks.md) [Completed]
-   - Framework registry populated with 32 candidate frameworks across 10 languages (Zig, Rust, Go, C#, C++, JS/TS, Ruby, Java, PHP, Python) with dual-libc Dockerfiles and valid manifests.
+  - Framework registry populated with 31 candidate frameworks across 10 languages (Zig, Rust, Go, C#, C++, JS/TS, Ruby, Java, PHP, Python) with dual-libc Dockerfiles and valid manifests.
 5. **Phase 4: Aggregation, Metrics Processing & Markdown Engine**: [docs/roadmap/phase4_reporter.md](docs/roadmap/phase4_reporter.md) [Completed]
    - Pure aggregation logic, SVG bar charts, append-only historical index, and Markdown table generator.
 6. **Phase 5: Bare-Metal Deployment & GitHub CI/CD**: [docs/roadmap/phase5_deployment.md](docs/roadmap/phase5_deployment.md) [Completed]
@@ -43,9 +43,9 @@ The Docker-based dual-libc baseline is implemented, but a result is publishable 
 
 ## Next milestones
 
-- Host-managed cgroups and CPU sets for complete collector attribution.
-- Full-matrix execution on a labelled self-hosted runner; deterministic smoke validation in hosted CI.
-- Immutable image and framework input pinning before historical comparison.
+- Host-managed cgroups and CPU sets for complete collector attribution. [Completed]
+- Full-matrix execution on a labelled self-hosted runner. [Requires designated host]
+- Immutable image and framework input pinning before historical comparison. [Completed]
 
 See [docs/how_to_use.md](docs/how_to_use.md) for the supported host workflow.
 

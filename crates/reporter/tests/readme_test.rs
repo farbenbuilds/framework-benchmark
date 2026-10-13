@@ -81,6 +81,7 @@ fn test_update_readme_leaderboard() {
 
     let updated = fs::read_to_string(&readme_path).expect("read updated readme failed");
     assert!(updated.contains("### Benchmark Leaderboard: plaintext"));
+    assert!(updated.contains("results/charts/plaintext_throughput.svg"));
     assert!(updated.contains("axum"));
     assert!(updated.contains("450000.00"));
 

@@ -1,4 +1,4 @@
-FROM alpine:3.21 AS build
+FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507 AS build
 WORKDIR /src
 RUN apk add --no-cache asio-dev cmake g++ git make ninja openssl-dev zlib-dev
 RUN git init /src/agensio && git -C /src/agensio remote add origin \
@@ -8,7 +8,7 @@ RUN git init /src/agensio && git -C /src/agensio remote add origin \
 RUN cmake -S /src/agensio -B /src/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DAGENSIO_NATIVE=ON -DAGENSIO_TESTS=OFF && cmake --build /src/build --target agensio
 
-FROM alpine:3.21
+FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
 WORKDIR /app
 RUN apk add --no-cache libstdc++ openssl zlib
 COPY agensio.toml /etc/agensio/agensio.toml

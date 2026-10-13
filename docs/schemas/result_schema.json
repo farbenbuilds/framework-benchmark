@@ -37,7 +37,11 @@
       "required": ["revision", "image_id"],
       "properties": {
         "revision": { "type": "string", "minLength": 1 },
-        "image_id": { "type": ["string", "null"] }
+        "image_id": { "type": ["string", "null"] },
+        "framework_input_sha256": { "type": ["string", "null"] },
+        "target_cpus": { "type": ["string", "null"] },
+        "load_cpus": { "type": ["string", "null"] },
+        "cgroup_path": { "type": ["string", "null"] }
       }
     },
     "benchmarks": {

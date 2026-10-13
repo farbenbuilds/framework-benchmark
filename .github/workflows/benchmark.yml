@@ -18,9 +18,13 @@ concurrency:
 jobs:
   benchmark:
     name: Run Benchmark Suite
-    runs-on: [self-hosted, linux, benchmark]
+    runs-on: [self-hosted, linux, x64, benchmark-dedicated]
     env:
       BENCHMARK_FRAMEWORK_FILTER: ${{ inputs.framework_filter || 'all' }}
+      BENCHMARK_DEDICATED_HOST: '1'
+      BENCHMARK_TARGET_CPUS: '2-7'
+      BENCHMARK_LOAD_CPUS: '8-15'
+      BENCHMARK_CGROUP_PARENT: framework-benchmark
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,13 +45,13 @@ jobs:
             ${{ runner.os }}-cargo-benchmark-
 
       - name: Verify host environment
-        run: sh scripts/verify_host.sh
+        run: sh scripts/verify_host.sh --require-dedicated
 
       - name: Build benchmark orchestrator
         run: cargo build --release --bin orchestrator
 
       - name: Run orchestrator
-        run: ./target/release/orchestrator frameworks results
+        run: taskset --cpu-list "$BENCHMARK_LOAD_CPUS" ./target/release/orchestrator frameworks results
 
       - name: Upload benchmark artifacts
         uses: actions/upload-artifact@v4

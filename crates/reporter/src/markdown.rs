@@ -1,5 +1,5 @@
 use crate::error::ReporterError;
-use crate::logic::{LeaderboardRow, aggregate_leaderboard};
+use crate::logic::{DualLibcDelta, LeaderboardRow, aggregate_leaderboard, dual_libc_deltas};
 use crate::storage::replace_file;
 use common::result::RunResult;
 use std::fmt::Write;
@@ -8,16 +8,31 @@ use std::path::Path;
 
 const START_MARKER: &str = "<!-- BENCHMARK_RESULTS_START -->";
 const END_MARKER: &str = "<!-- BENCHMARK_RESULTS_END -->";
-
 pub fn render_markdown_table(rows: &[LeaderboardRow], category: &str) -> String {
+    render_markdown_table_with_deltas(rows, &[], category)
+}
+
+pub fn render_markdown_table_with_deltas(
+    rows: &[LeaderboardRow],
+    deltas: &[DualLibcDelta],
+    category: &str,
+) -> String {
     let mut output = String::new();
     let category = markdown_cell(category);
     let _ = writeln!(output, "### Benchmark Leaderboard: {category}\n");
+    let _ = writeln!(
+        output,
+        "![{category} throughput and P99 latency](results/charts/{category}_throughput.svg)\n"
+    );
     render_throughput_table(&mut output, rows);
     output.push('\n');
     render_latency_table(&mut output, rows);
     output.push('\n');
     render_resources_table(&mut output, rows);
+    if !deltas.is_empty() {
+        output.push('\n');
+        render_delta_table(&mut output, deltas);
+    }
     output
 }
 
@@ -35,10 +50,9 @@ pub fn render_readme_leaderboards(results: &[RunResult]) -> String {
 
     let mut section = String::from("\n\n");
     for category in categories {
-        section.push_str(&render_markdown_table(
-            &aggregate_leaderboard(results, category),
-            category,
-        ));
+        let rows = aggregate_leaderboard(results, category);
+        let deltas = dual_libc_deltas(results, category);
+        section.push_str(&render_markdown_table_with_deltas(&rows, &deltas, category));
         section.push('\n');
     }
     section
@@ -145,6 +159,27 @@ fn render_resources_table(output: &mut String, rows: &[LeaderboardRow]) {
             row.errors
         );
     }
+}
+
+fn render_delta_table(output: &mut String, deltas: &[DualLibcDelta]) {
+    output.push_str("#### musl vs glibc deltas\n\n");
+    output.push_str("| Framework | Version | Concurrency | RPS delta | P99 delta |\n");
+    output.push_str("| :-------- | :------ | ----------: | --------: | --------: |\n");
+    for delta in deltas {
+        let _ = writeln!(
+            output,
+            "| {} | {} | {} | {} | {} |",
+            markdown_cell(&delta.framework),
+            markdown_cell(&delta.framework_version),
+            delta.concurrency,
+            percentage_cell(delta.requests_per_sec_change_pct),
+            percentage_cell(delta.p99_latency_change_pct),
+        );
+    }
+}
+
+fn percentage_cell(value: Option<f64>) -> String {
+    value.map_or_else(|| "n/a".into(), |value| format!("{value:+.2}%"))
 }
 
 fn markdown_cell(value: &str) -> String {

@@ -1,6 +1,7 @@
 use crate::error::OrchestratorError;
 use crate::lifecycle::run_framework_suite;
 use crate::poller::wait_for_ready;
+use crate::provenance::framework_input_sha256;
 use crate::{start_container, stop_container};
 use common::manifest::FrameworkManifest;
 use common::result::{LibcVariant, RunProvenance, RunResult};
@@ -60,6 +61,7 @@ pub async fn execute_framework_session(
     config: &BenchmarkSessionConfig,
 ) -> Result<RunResult, OrchestratorError> {
     let revision = current_revision(framework_dir);
+    let framework_input_sha256 = framework_input_sha256(framework_dir)?;
     let target = if config.manage_container {
         Some(start_container(
             framework_dir,
@@ -103,6 +105,15 @@ pub async fn execute_framework_session(
                 .as_ref()
                 .map(|target| target.image_id.clone())
                 .or_else(|| std::env::var("BENCHMARK_IMAGE_ID").ok()),
+            framework_input_sha256: Some(framework_input_sha256),
+            target_cpus: std::env::var("BENCHMARK_TARGET_CPUS").ok(),
+            load_cpus: std::env::var("BENCHMARK_LOAD_CPUS").ok(),
+            cgroup_path: target.as_ref().and_then(|target| {
+                target
+                    .cgroup_dir
+                    .as_ref()
+                    .map(|path| path.display().to_string())
+            }),
         };
         persist_session_results(&result, &config.output_dir)?;
         if let Some(readme) = &config.readme_path {

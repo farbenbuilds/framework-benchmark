@@ -12,6 +12,7 @@ collector = { path = "../collector" }
 reporter = { path = "../reporter" }
 tokio = { workspace = true }
 thiserror = { workspace = true }
+sha2 = { workspace = true }
 
 [lints]
 workspace = true

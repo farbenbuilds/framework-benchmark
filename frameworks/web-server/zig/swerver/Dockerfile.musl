@@ -1,4 +1,4 @@
-FROM alpine:3.21 AS builder
+FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507 AS builder
 WORKDIR /usr/src/app
 RUN apk add --no-cache ca-certificates curl git xz zlib-dev
 RUN curl -fsSL https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
@@ -6,7 +6,7 @@ RUN git init /opt/swerver && git -C /opt/swerver remote add origin https://githu
 COPY src/main.zig /opt/swerver/src/main.zig
 RUN cd /opt/swerver && zig build -Doptimize=ReleaseFast
 
-FROM alpine:3.21
+FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
 WORKDIR /app
 RUN apk add --no-cache ca-certificates curl
 COPY --from=builder /opt/swerver/zig-out/bin/swerver /app/server
