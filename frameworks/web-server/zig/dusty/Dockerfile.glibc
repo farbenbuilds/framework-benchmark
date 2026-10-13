@@ -1,9 +1,10 @@
 FROM debian:bookworm-slim AS builder
 WORKDIR /usr/src/app
-RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl xz-utils && rm -rf /var/lib/apt/lists/*
-RUN curl -sSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-linux-x86_64-0.13.0/zig /usr/local/bin/zig
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl git xz-utils && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
+RUN git init /opt/dusty && git -C /opt/dusty remote add origin https://github.com/lalinsky/dusty.git && git -C /opt/dusty fetch --depth 1 origin 494f856d1795cfbf6180f6f8e5a80665d8114174 && git -C /opt/dusty checkout --detach FETCH_HEAD
 COPY . .
-RUN zig build -Doptimize=ReleaseFast
+RUN ln -s /opt/dusty dusty && zig build -Doptimize=ReleaseFast
 
 FROM debian:bookworm-slim
 WORKDIR /app
