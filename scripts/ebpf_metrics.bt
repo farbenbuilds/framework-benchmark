@@ -1,0 +1,36 @@
+#!/usr/bin/env bpftrace
+
+tracepoint:sched:sched_switch
+/pid == $1/
+{
+    @off_cpu_start[tid] = nsecs;
+    @context_switches = count();
+}
+
+tracepoint:sched:sched_switch
+/@off_cpu_start[args->next_pid]/
+{
+    $start = @off_cpu_start[args->next_pid];
+    @off_cpu_usec = sum((nsecs - $start) / 1000);
+    delete(@off_cpu_start[args->next_pid]);
+}
+
+kprobe:mark_page_accessed
+/pid == $1/
+{
+    @page_cache_hits = count();
+}
+
+kprobe:filemap_add_folio
+/pid == $1/
+{
+    @page_cache_misses = count();
+}
+
+END
+{
+    printf("off_cpu_usec %lld\n", @off_cpu_usec);
+    printf("page_cache_hits %lld\n", @page_cache_hits);
+    printf("page_cache_misses %lld\n", @page_cache_misses);
+    printf("context_switches %lld\n", @context_switches);
+}

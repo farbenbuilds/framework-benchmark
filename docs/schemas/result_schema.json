@@ -76,7 +76,8 @@
               "avg_rss_bytes": { "type": "integer" },
               "cpu_user_pct": { "type": "number" },
               "cpu_kernel_pct": { "type": "number" },
-              "context_switches": { "type": "integer" }
+              "context_switches": { "type": "integer" },
+              "rapl_joules": { "type": ["number", "null"], "minimum": 0 }
             }
           },
           "status_codes": {

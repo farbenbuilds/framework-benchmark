@@ -1,11 +1,18 @@
 FROM alpine:3.21 AS build
 WORKDIR /src
-RUN apk add --no-cache cmake make g++
-COPY CMakeLists.txt main.cpp ./
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN apk add --no-cache asio-dev cmake g++ git make ninja openssl-dev zlib-dev
+RUN git init /src/agensio && git -C /src/agensio remote add origin \
+    https://github.com/YiannisBourkelis/agensio.git && git -C /src/agensio fetch \
+    --depth 1 origin eadce75a37564fc379f33aab110408cdfa0b73a4 && \
+    git -C /src/agensio checkout --detach FETCH_HEAD
+RUN cmake -S /src/agensio -B /src/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DAGENSIO_NATIVE=ON -DAGENSIO_TESTS=OFF && cmake --build /src/build --target agensio
 
 FROM alpine:3.21
 WORKDIR /app
-COPY --from=build /src/build/server /app/server
+RUN apk add --no-cache libstdc++ openssl zlib
+COPY agensio.toml /etc/agensio/agensio.toml
+COPY www /app/www
+COPY --from=build /src/build/agensio /usr/local/bin/agensio
 EXPOSE 8080
-ENTRYPOINT ["/app/server"]
+ENTRYPOINT ["/usr/local/bin/agensio", "-c", "/etc/agensio/agensio.toml"]

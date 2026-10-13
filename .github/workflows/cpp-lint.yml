@@ -1,0 +1,28 @@
+name: Lint C++ Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/cpp/**, .github/workflows/cpp-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/cpp/**, .github/workflows/cpp-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: C++ format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-cpp
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install clang-format
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-format
+      - name: Check formatting
+        run: find frameworks/web-server/cpp -name '*.cpp' -print0 | xargs -0 clang-format --dry-run --Werror

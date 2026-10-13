@@ -5,4 +5,5 @@ COPY Gemfile ./
 RUN bundle install
 COPY config.ru ./
 EXPOSE 8080
-ENTRYPOINT ["falcon", "serve", "--bind", "http://0.0.0.0:8080"]
+ENV RUBY_YJIT_ENABLE=1
+ENTRYPOINT ["sh", "-c", "exec falcon serve --bind http://0.0.0.0:8080 --count ${BENCHMARK_WORKERS:-1}"]

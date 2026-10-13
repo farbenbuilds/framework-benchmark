@@ -14,29 +14,44 @@ pub async fn execute_websocket_workload(
     target_pid: Option<u32>,
     cgroup_dir: Option<&Path>,
 ) -> Result<TestMetrics, crate::error::OrchestratorError> {
-    let sampler = BackgroundSampler::spawn_target(
-        target_pid,
-        cgroup_dir.map(Path::to_path_buf),
-        Duration::from_millis(50),
-    );
+    let sampler =
+        BackgroundSampler::spawn_target(target_pid, cgroup_dir, Duration::from_millis(50));
 
-    let deadline = Instant::now() + Duration::from_secs(u64::from(duration_secs));
+    let started = Instant::now();
+    let deadline = started + Duration::from_secs(u64::from(duration_secs));
+    let workers = concurrency.max(1);
+    let mut handles = Vec::with_capacity(workers as usize);
+    for _ in 0..workers {
+        let addr = target_addr.to_string();
+        let path = endpoint_path.to_string();
+        handles.push(tokio::spawn(async move {
+            let mut recorder = LatencyRecorder::default();
+            let mut stats = WorkerStats::default();
+            let _ = AutobahnSuiteRunner::run_echo_benchmark(
+                &addr,
+                &path,
+                deadline,
+                &mut recorder,
+                &mut stats,
+            )
+            .await;
+            (recorder, stats)
+        }));
+    }
+
     let mut recorder = LatencyRecorder::default();
     let mut stats = WorkerStats::default();
-
-    let _ = AutobahnSuiteRunner::run_echo_benchmark(
-        target_addr,
-        endpoint_path,
-        deadline,
-        &mut recorder,
-        &mut stats,
-    )
-    .await;
+    for handle in handles {
+        if let Ok((worker_recorder, worker_stats)) = handle.await {
+            recorder.combine(&worker_recorder);
+            stats.merge(&worker_stats);
+        }
+    }
 
     let resources = sampler.stop().await;
-    let rps = stats.requests_completed as f64 / f64::from(duration_secs.max(1));
-    let mb_per_sec =
-        (stats.bytes_transferred as f64 / (1024.0 * 1024.0)) / f64::from(duration_secs.max(1));
+    let elapsed_secs = started.elapsed().as_secs_f64().max(0.001);
+    let rps = stats.requests_completed as f64 / elapsed_secs;
+    let mb_per_sec = (stats.bytes_transferred as f64 / (1024.0 * 1024.0)) / elapsed_secs;
 
     Ok(TestMetrics {
         category: "websocket".into(),

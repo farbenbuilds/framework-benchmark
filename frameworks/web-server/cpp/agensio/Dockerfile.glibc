@@ -1,11 +1,21 @@
-FROM debian:bookworm-slim AS build
+FROM debian:trixie AS build
 WORKDIR /src
-RUN apt-get update -qq && apt-get install -y --no-install-recommends cmake make g++ && rm -rf /var/lib/apt/lists/*
-COPY CMakeLists.txt main.cpp ./
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    build-essential ca-certificates cmake git libasio-dev libssl-dev ninja-build \
+    zlib1g-dev && rm -rf /var/lib/apt/lists/*
+RUN git init /src/agensio && git -C /src/agensio remote add origin \
+    https://github.com/YiannisBourkelis/agensio.git && git -C /src/agensio fetch \
+    --depth 1 origin eadce75a37564fc379f33aab110408cdfa0b73a4 && \
+    git -C /src/agensio checkout --detach FETCH_HEAD
+RUN cmake -S /src/agensio -B /src/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DAGENSIO_NATIVE=ON -DAGENSIO_TESTS=OFF && cmake --build /src/build --target agensio
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 WORKDIR /app
-COPY --from=build /src/build/server /app/server
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    libssl3t64 zlib1g && rm -rf /var/lib/apt/lists/*
+COPY agensio.toml /etc/agensio/agensio.toml
+COPY www /app/www
+COPY --from=build /src/build/agensio /usr/local/bin/agensio
 EXPOSE 8080
-ENTRYPOINT ["/app/server"]
+ENTRYPOINT ["/usr/local/bin/agensio", "-c", "/etc/agensio/agensio.toml"]

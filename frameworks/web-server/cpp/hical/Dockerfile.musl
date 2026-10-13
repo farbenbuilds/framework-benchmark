@@ -1,11 +1,16 @@
 FROM alpine:3.21 AS build
 WORKDIR /src
-RUN apk add --no-cache cmake make g++
+RUN apk add --no-cache boost-dev cmake g++ git make openssl-dev zlib-dev
+RUN git init /opt/hical && git -C /opt/hical remote add origin \
+    https://github.com/Hical61/Hical.git && git -C /opt/hical fetch --depth 1 \
+    origin e61cb09a0c699fc1ffcdb9824a8edcad88d22fb0 && \
+    git -C /opt/hical checkout --detach FETCH_HEAD
 COPY CMakeLists.txt main.cpp ./
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel
 
 FROM alpine:3.21
 WORKDIR /app
+RUN apk add --no-cache boost-json libstdc++ openssl zlib
 COPY --from=build /src/build/server /app/server
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]

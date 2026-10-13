@@ -26,7 +26,7 @@ fi
 
 echo "[2/4] Checking for files exceeding 200 lines..."
 # Exclude lockfiles and vendored agent skills
-long_files=$(git ls-files | grep -v '^\.agents/skills/' | grep -v 'skills-lock\.json$' | grep -v 'Cargo\.lock$' | while read -r file; do
+long_files=$(git ls-files | grep -Ev '^\.agents/skills/|skills-lock\.json$|Cargo\.lock$|package-lock\.json$' | while read -r file; do
     if [ -f "$file" ]; then
         lines=$(wc -l < "$file")
         if [ "$lines" -gt 200 ]; then
@@ -44,7 +44,7 @@ else
 fi
 
 echo "[3/4] Checking for slop markers in source files..."
-# Exclude auditor scripts and TODO.md from slop pattern search
+# Exclude the auditor from its own marker search
 slop_matches=$(git ls-files '*.rs' '*.sh' '*.toml' '*.yml' '*.yaml' | grep -v '^scripts/check_conventions\.' | while read -r file; do
     if [ -f "$file" ]; then
         if grep -nE '\b(FIXME|XXX|HACK)\b' "$file" >/dev/null 2>&1; then

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FrameworkMetadata {
     pub name: String,
     pub version: String,
@@ -14,6 +15,7 @@ pub struct FrameworkMetadata {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Capabilities {
     #[serde(default)]
     pub plaintext: bool,
@@ -36,6 +38,7 @@ pub struct Capabilities {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DockerBuildConfig {
     pub dockerfile_glibc: Option<String>,
     pub dockerfile_musl: Option<String>,
@@ -44,12 +47,14 @@ pub struct DockerBuildConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NixBuildConfig {
     pub flake_attr_glibc: Option<String>,
     pub flake_attr_musl: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BuildConfig {
     pub engine: String,
     pub docker: Option<DockerBuildConfig>,
@@ -57,6 +62,7 @@ pub struct BuildConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RuntimeConfig {
     pub port: u16,
     pub healthcheck_path: String,
@@ -72,6 +78,7 @@ fn default_startup_timeout() -> u64 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FrameworkManifest {
     pub framework: FrameworkMetadata,
     pub capabilities: Capabilities,
@@ -108,6 +115,30 @@ pub fn validate_manifest(m: &FrameworkManifest) -> Result<(), CommonError> {
         return Err(CommonError::Validation(
             "build engine must be 'docker' or 'nix'".into(),
         ));
+    }
+    if m.build.engine == "docker" {
+        let Some(docker) = &m.build.docker else {
+            return Err(CommonError::Validation(
+                "docker engine requires docker config".into(),
+            ));
+        };
+        if docker.dockerfile_glibc.is_none() || docker.dockerfile_musl.is_none() {
+            return Err(CommonError::Validation(
+                "docker engine requires glibc and musl Dockerfiles".into(),
+            ));
+        }
+    }
+    if m.build.engine == "nix" {
+        let Some(nix) = &m.build.nix else {
+            return Err(CommonError::Validation(
+                "nix engine requires nix config".into(),
+            ));
+        };
+        if nix.flake_attr_glibc.is_none() || nix.flake_attr_musl.is_none() {
+            return Err(CommonError::Validation(
+                "nix engine requires glibc and musl flake attributes".into(),
+            ));
+        }
     }
     Ok(())
 }

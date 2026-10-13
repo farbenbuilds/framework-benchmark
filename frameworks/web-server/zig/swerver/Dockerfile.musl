@@ -1,13 +1,14 @@
 FROM alpine:3.21 AS builder
 WORKDIR /usr/src/app
-RUN apk add --no-cache ca-certificates curl xz
-RUN curl -sSL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-linux-x86_64-0.13.0/zig /usr/local/bin/zig
-COPY . .
-RUN zig build -Doptimize=ReleaseFast
+RUN apk add --no-cache ca-certificates curl git xz zlib-dev
+RUN curl -fsSL https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
+RUN git init /opt/swerver && git -C /opt/swerver remote add origin https://github.com/justinGrosvenor/swerver.git && git -C /opt/swerver fetch --depth 1 origin a4e469301d4a47fb3f4552b7cbd58d135fac8c9a && git -C /opt/swerver checkout --detach FETCH_HEAD
+COPY src/main.zig /opt/swerver/src/main.zig
+RUN cd /opt/swerver && zig build -Doptimize=ReleaseFast
 
 FROM alpine:3.21
 WORKDIR /app
 RUN apk add --no-cache ca-certificates curl
-COPY --from=builder /usr/src/app/zig-out/bin/server /app/server
+COPY --from=builder /opt/swerver/zig-out/bin/swerver /app/server
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]

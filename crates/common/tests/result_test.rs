@@ -44,6 +44,7 @@ fn test_roundtrip_result_serialization() {
                 cpu_user_pct: 75.5,
                 cpu_kernel_pct: 12.3,
                 context_switches: 45_000,
+                rapl_joules: None,
             },
             status_codes: StatusCodeCounts {
                 http_2xx: 3_000_000,

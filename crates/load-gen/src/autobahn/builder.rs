@@ -66,6 +66,30 @@ impl FrameBuilder {
         frames
     }
 
+    pub fn build_fragmented_binary(data: &[u8], chunks: &[usize], mask: [u8; 4]) -> Vec<Vec<u8>> {
+        let mut frames = Vec::with_capacity(chunks.len());
+        let mut offset = 0usize;
+        for (index, size) in chunks.iter().enumerate() {
+            let end = offset.saturating_add(*size).min(data.len());
+            let opcode = if index == 0 {
+                FrameOpcode::Binary
+            } else {
+                FrameOpcode::Continuation
+            };
+            frames.push(Self::build_client_frame(
+                opcode,
+                &data[offset..end],
+                mask,
+                end == data.len(),
+            ));
+            offset = end;
+            if offset == data.len() {
+                break;
+            }
+        }
+        frames
+    }
+
     pub fn build_close_frame(code: u16, mask: [u8; 4]) -> Vec<u8> {
         let payload = code.to_be_bytes();
         Self::build_client_frame(FrameOpcode::Close, &payload, mask, true)

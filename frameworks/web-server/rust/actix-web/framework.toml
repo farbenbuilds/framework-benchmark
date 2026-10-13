@@ -2,7 +2,7 @@
 name = "actix-web"
 version = "4.9.0"
 language = "rust"
-language_version = "1.85"
+language_version = "1.88"
 website = "https://actix.rs/"
 category = "web-server"
 tier = "micro"
@@ -10,10 +10,10 @@ tier = "micro"
 [capabilities]
 plaintext = true
 json = true
-db_single = false
-db_multi = false
-fortunes = false
-updates = false
+db_single = true
+db_multi = true
+fortunes = true
+updates = true
 websocket = false
 http2 = false
 http3 = false

@@ -1,5 +1,6 @@
 # Build artifacts
-/target/
+target/
+__pycache__/
 
 # Operating System
 .DS_Store
@@ -12,3 +13,6 @@ results/raw/
 # Environment
 .env
 .env.local
+
+# Local shell environment
+.direnv/*

@@ -1,0 +1,26 @@
+name: Lint PHP Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/php/**, .github/workflows/php-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/php/**, .github/workflows/php-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: PHP syntax
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-php
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check syntax
+        run: find frameworks/web-server/php -name '*.php' -print0 | xargs -0 -n1 php -l

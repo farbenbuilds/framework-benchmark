@@ -2,7 +2,7 @@
 name = "ntex"
 version = "2.8.0"
 language = "rust"
-language_version = "1.85"
+language_version = "1.88"
 website = "https://github.com/ntex-rs/ntex"
 category = "web-server"
 tier = "micro"

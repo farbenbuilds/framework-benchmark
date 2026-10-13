@@ -1,28 +1,13 @@
-import http from "node:http";
+import express from "express";
 
-const plaintext = Buffer.from("Hello, World!");
-const json = Buffer.from(JSON.stringify({ message: "Hello, World!" }));
+const app = express({ cluster: "auto" });
 
-const server = http.createServer((req, res) => {
-  if (req.url === "/healthz") {
-    res.writeHead(200);
-    res.end();
-  } else if (req.url === "/plaintext") {
-    res.writeHead(200, {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Content-Length": plaintext.length,
-    });
-    res.end(plaintext);
-  } else if (req.url === "/json") {
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-      "Content-Length": json.length,
-    });
-    res.end(json);
-  } else {
-    res.writeHead(404);
-    res.end();
-  }
-});
+app.get("/healthz", (_, response) => response.status(200).end());
+app.get("/plaintext", (_, response) =>
+  response.type("text/plain").send("Hello, World!"),
+);
+app.get("/json", (_, response) =>
+  response.type("application/json").send('{"message":"Hello, World!"}'),
+);
 
-server.listen(8080);
+app.listen(8080);

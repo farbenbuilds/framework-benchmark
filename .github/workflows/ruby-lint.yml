@@ -1,0 +1,29 @@
+name: Lint Ruby Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/ruby/**, .github/workflows/ruby-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/ruby/**, .github/workflows/ruby-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Ruby syntax
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-ruby
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - name: Check syntax
+        run: find frameworks/web-server/ruby -name '*.rb' -print0 | xargs -0 -n1 ruby -c

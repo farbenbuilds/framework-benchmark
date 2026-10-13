@@ -1,6 +1,6 @@
 use common::manifest::parse_manifest;
 use common::result::LibcVariant;
-use orchestrator::lifecycle::run_framework_suite;
+use orchestrator::lifecycle::{SuiteExecutionConfig, SuiteTiming, run_framework_suite_with_timing};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
@@ -63,17 +63,22 @@ startup_timeout_seconds = 2
     );
 
     let manifest = parse_manifest(&manifest_toml).unwrap();
-    let result = run_framework_suite(
-        &manifest,
-        &addr.to_string(),
-        4,
-        1,
-        LibcVariant::Glibc,
-        None,
-        None,
-    )
-    .await
-    .unwrap();
+    let target_addr = addr.to_string();
+    let config = SuiteExecutionConfig {
+        target_addr: &target_addr,
+        concurrency: 4,
+        duration_secs: 1,
+        libc: LibcVariant::Glibc,
+        target_pid: None,
+        cgroup_dir: None,
+        timing: SuiteTiming {
+            warmup_secs: 1,
+            cooldown_secs: 0,
+        },
+    };
+    let result = run_framework_suite_with_timing(&manifest, config)
+        .await
+        .unwrap();
 
     assert_eq!(result.framework_name, "mock");
     assert_eq!(result.benchmarks.len(), 1);

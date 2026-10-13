@@ -15,10 +15,10 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusOK)
 	case "/plaintext":
 		ctx.SetContentType("text/plain; charset=utf-8")
-		ctx.SetBody(plaintextBody)
+		ctx.Response.SetBodyRaw(plaintextBody)
 	case "/json":
 		ctx.SetContentType("application/json")
-		ctx.SetBody(jsonBody)
+		ctx.Response.SetBodyRaw(jsonBody)
 	default:
 		ctx.Error("Not Found", fasthttp.StatusNotFound)
 	}

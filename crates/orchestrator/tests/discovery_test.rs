@@ -59,3 +59,10 @@ fn test_discover_empty_directory() {
 
     let _ = fs::remove_dir_all(temp_empty);
 }
+
+#[test]
+fn test_registry_manifests_are_valid() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frameworks");
+    let discovered = discover_frameworks(&root).expect("discover framework registry failed");
+    assert_eq!(discovered.len(), 31);
+}

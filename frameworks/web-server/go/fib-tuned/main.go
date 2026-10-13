@@ -16,7 +16,7 @@ func main() {
 	})
 
 	app.Get("/healthz", func(c *fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusOK)
+		return c.Send(nil)
 	})
 
 	app.Get("/plaintext", func(c *fiber.Ctx) error {

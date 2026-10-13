@@ -1,3 +1,4 @@
+use common::result::LibcVariant;
 use orchestrator::discovery::discover_frameworks;
 use orchestrator::error::OrchestratorError;
 use orchestrator::runner::{BenchmarkSessionConfig, execute_framework_session};
@@ -23,8 +24,11 @@ async fn main() -> Result<(), OrchestratorError> {
     println!("==> Discovered {} framework targets.", frameworks.len());
     let config = BenchmarkSessionConfig {
         output_dir: output_dir.to_string(),
+        database_url: env::var("DATABASE_URL").ok(),
+        manage_container: env::var("BENCHMARK_MANAGE_CONTAINER").map_or(true, |value| value != "0"),
         ..BenchmarkSessionConfig::default()
     };
+    let libcs = selected_libcs()?;
 
     for (dir, manifest) in frameworks {
         println!(
@@ -33,20 +37,38 @@ async fn main() -> Result<(), OrchestratorError> {
             manifest.framework.category,
             dir.display()
         );
-        match execute_framework_session(&manifest, &config).await {
-            Ok(res) => {
-                let rps = res.benchmarks.first().map_or(0.0, |b| b.requests_per_sec);
-                println!(
-                    "==> Benchmark completed for {}: {:.2} req/s across {} workloads",
-                    manifest.framework.name,
-                    rps,
-                    res.benchmarks.len()
-                );
+        for libc in &libcs {
+            let config = BenchmarkSessionConfig {
+                libc: *libc,
+                ..config.clone()
+            };
+            match execute_framework_session(&dir, &manifest, &config).await {
+                Ok(res) => {
+                    let rps = res.benchmarks.first().map_or(0.0, |b| b.requests_per_sec);
+                    println!(
+                        "==> Benchmark completed for {}: {:.2} req/s across {} workloads",
+                        manifest.framework.name,
+                        rps,
+                        res.benchmarks.len()
+                    );
+                }
+                Err(e) => eprintln!("==> Failed benchmark for {}: {e}", manifest.framework.name),
             }
-            Err(e) => eprintln!("==> Failed benchmark for {}: {e}", manifest.framework.name),
         }
     }
 
     println!("==> Benchmark orchestration finished.");
     Ok(())
+}
+
+fn selected_libcs() -> Result<Vec<LibcVariant>, OrchestratorError> {
+    let selected = env::var("BENCHMARK_LIBC").unwrap_or_else(|_| "all".into());
+    match selected.as_str() {
+        "all" => Ok(vec![LibcVariant::Glibc, LibcVariant::Musl]),
+        "glibc" => Ok(vec![LibcVariant::Glibc]),
+        "musl" => Ok(vec![LibcVariant::Musl]),
+        value => Err(OrchestratorError::Process(format!(
+            "invalid BENCHMARK_LIBC: {value}"
+        ))),
+    }
 }

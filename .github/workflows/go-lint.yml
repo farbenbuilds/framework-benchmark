@@ -1,0 +1,38 @@
+name: Lint Go Frameworks
+
+on:
+  push:
+    branches: [main]
+    paths: [frameworks/web-server/go/**, .github/workflows/go-lint.yml]
+  pull_request:
+    paths: [frameworks/web-server/go/**, .github/workflows/go-lint.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Go format and vet
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: lint-go
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: 1.23.0
+          check-latest: false
+          cache-dependency-path: frameworks/web-server/go/*/go.mod
+      - name: Check formatting
+        run: test -z "$(find frameworks/web-server/go -name '*.go' -print0 | xargs -0 gofmt -l)"
+      - name: Run vet
+        shell: bash
+        run: |
+          find frameworks/web-server/go -name go.mod -print0 | while IFS= read -r -d '' manifest; do
+            module=$(dirname "$manifest")
+            (cd "$module" && go vet ./...)
+          done

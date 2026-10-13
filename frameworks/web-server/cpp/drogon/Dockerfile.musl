@@ -1,11 +1,19 @@
 FROM alpine:3.21 AS build
 WORKDIR /src
-RUN apk add --no-cache cmake make g++
+RUN apk add --no-cache cmake g++ git jsoncpp-dev make util-linux-dev zlib-dev
+RUN git clone --depth 1 --branch v1.9.8 --recurse-submodules \
+    https://github.com/drogonframework/drogon.git /opt/drogon
+RUN cmake -S /opt/drogon -B /opt/drogon/build -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_BROTLI=OFF -DBUILD_CTL=OFF -DBUILD_EXAMPLES=OFF -DBUILD_ORM=OFF \
+    -DBUILD_YAML_CONFIG=OFF -DCMAKE_INSTALL_PREFIX=/opt/drogon/install && \
+    cmake --build /opt/drogon/build --parallel && cmake --install /opt/drogon/build
 COPY CMakeLists.txt main.cpp ./
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/drogon/install && \
+    cmake --build build --parallel
 
 FROM alpine:3.21
 WORKDIR /app
-COPY --from=build /src/build/server /app/server
+RUN apk add --no-cache jsoncpp libstdc++ libuuid zlib
+COPY --from=build /src/build/server ./server
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]

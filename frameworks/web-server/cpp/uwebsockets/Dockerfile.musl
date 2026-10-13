@@ -1,11 +1,15 @@
 FROM alpine:3.21 AS build
 WORKDIR /src
-RUN apk add --no-cache cmake make g++
+RUN apk add --no-cache cmake g++ git make
+RUN git clone --depth 1 --branch v20.69.0 --recurse-submodules \
+    https://github.com/uNetworking/uWebSockets.git /opt/uwebsockets && \
+    make -C /opt/uwebsockets/uSockets
 COPY CMakeLists.txt main.cpp ./
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel
 
 FROM alpine:3.21
 WORKDIR /app
-COPY --from=build /src/build/server /app/server
+RUN apk add --no-cache libstdc++
+COPY --from=build /src/build/server ./server
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]
