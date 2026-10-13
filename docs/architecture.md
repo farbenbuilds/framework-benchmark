@@ -16,10 +16,10 @@
 +-----------------------------------------------------------------+
 ```
 
-### CPU Pinning
-- The benchmark orchestrator uses `sched_setaffinity` to bind the target framework process to dedicated CPU cores.
-- The load generator runs on separate isolated cores to avoid CPU contention and cache pollution.
-- OS interrupts are assigned to reserved housekeeping cores.
+### CPU isolation
+- Reserve server and load-generator capacity in the host or OpenStack flavor before a run.
+- The current orchestrator records a supplied cgroup path; CPU-set creation remains an operator responsibility.
+- Record topology and traffic placement with every publishable result.
 
 ### Cgroups v2 Resource Accounting
 Resource consumption is monitored at the kernel level:
@@ -49,6 +49,6 @@ Every benchmark trial follows a deterministic state machine:
 8. **Process Metrics**: Read collected HDR histogram and cgroups stats, serialize to JSON, and clean up.
 
 ## Load Generation and Latency Tracking
-- Built on `tokio` and `hyper` connection pools.
+- Built on Tokio TCP streams and httparse response framing.
 - Latency samples are recorded in microsecond-resolution **HDR Histograms**.
 - **Coordinated Omission**: Uses a scheduled issuance model so request delays under queue saturation are recorded in the histogram rather than silently dropped.

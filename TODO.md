@@ -1,10 +1,21 @@
-# Multi-Language Server/Client Framework Benchmark Roadmap
+# Framework Benchmark Roadmap
 
 Welcome to the **Framework Benchmark** project roadmap. This document provides the high-level roadmap and directs developers and autonomous agents to detailed architectural specifications and phase checklists.
 
 The project evaluates HTTP and WebSocket server and client frameworks across languages and runtimes on Linux, with parallel evaluation under **glibc** and **musl**.
 
-## Roadmap Index & Status
+## Current status
+
+The Docker-based dual-libc baseline is implemented, but a result is publishable only after the full selected matrix runs on an isolated Linux or OpenStack host. The repository's completed milestones describe delivered code, not proof of a reproducible performance result.
+
+## Publication checklist
+
+1. Use a dedicated cgroups v2 Linux host and record its CPU topology.
+2. Build and run both glibc and musl for every published framework row.
+3. Keep raw JSON, revision, host details, workload settings, and image provenance together.
+4. Review generated results before `scripts/commit_benchmark_results.sh --apply`; pushing is explicit.
+
+## Roadmap index
 
 1. **Architecture & Test Categories**: [docs/roadmap/overview.md](docs/roadmap/overview.md) [Completed]
    - System design, runner workflow, workload matrix, and captured metrics.
@@ -29,6 +40,15 @@ The project evaluates HTTP and WebSocket server and client frameworks across lan
    - Dual-source telemetry sampling (`/proc` and cgroups v2) integrated into orchestrator runner.
 9. **Verification & Acceptance Criteria**: [docs/roadmap/acceptance_criteria.md](docs/roadmap/acceptance_criteria.md) [Completed]
    - Quality gates, 200 LOC ceiling, zero emojis, zero-allocation hot paths, and reproducibility.
+
+## Next milestones
+
+- Host-managed cgroups and CPU sets for complete collector attribution.
+- Explicit paced, pipelined, connection-churn, database, and WebSocket profiles.
+- Full-matrix execution on a labelled self-hosted runner; deterministic smoke validation in hosted CI.
+- Immutable image and framework input pinning before historical comparison.
+
+See [docs/how_to_use.md](docs/how_to_use.md) for the supported host workflow.
 
 ## Core Rules for Agents and Developers
 - Always apply Data-Oriented Design (DoD) and Functional Programming (FP).

@@ -6,7 +6,7 @@ Phase 5 automates host tuning, bare-metal runner scheduling, and GitHub pull req
 ## Tasks and Checklist
 
 ### 5.1 Host Provisioning and OS Tuning (`scripts/`)
-- [x] Implement `scripts/setup_host.sh` for Ubuntu/Debian bare-metal machines:
+- [x] Implement `scripts/setup_linux.sh` and compatibility `scripts/setup_host.sh` for Ubuntu/Debian bare-metal machines:
   - Configure CPU scaling governor to `performance`.
   - Apply sysctl network tuning (`net.core.somaxconn`, `tcp_tw_reuse`, buffer ceilings).
 - [x] Implement `scripts/verify_host.sh` to check CPU governor, cgroups v2, and socket backlog before initiating benchmark runs.
@@ -18,6 +18,6 @@ Phase 5 automates host tuning, bare-metal runner scheduling, and GitHub pull req
 - [x] Test execution (`cargo test --workspace`).
 
 ### 5.3 Automated Benchmark Runner Lifecycle
-- [x] Configure GitHub Actions workflow for scheduled and manual benchmark runs (`.github/workflows/benchmark.yml`).
+- [ ] Run the complete matrix only on a labelled dedicated host; hosted CI is not a defensible performance environment.
 - [x] Implement runner orchestrator execution script (`scripts/run_benchmarks.sh`) and CLI (`crates/orchestrator/src/main.rs`).
 - [x] Maintain automated output generation for Markdown tables and SVG charts under `results/`.

@@ -56,6 +56,14 @@ pub fn start_container(
         "--env".into(),
         format!("BENCHMARK_WORKERS={workers}"),
     ];
+    if small_host() {
+        args.push("--cpus".into());
+        args.push("1".into());
+        args.push("--memory".into());
+        args.push("2g".into());
+        args.push("--pids-limit".into());
+        args.push("128".into());
+    }
     if let Some(database_url) = database_url {
         args.push("--env".into());
         args.push(format!("DATABASE_URL={database_url}"));
@@ -80,6 +88,10 @@ fn benchmark_workers() -> usize {
         .and_then(|value| value.parse().ok())
         .filter(|value: &usize| *value > 0);
     configured.unwrap_or_else(|| std::thread::available_parallelism().map_or(1, usize::from))
+}
+
+fn small_host() -> bool {
+    env::var("BENCHMARK_SMALL_HOST").is_ok_and(|value| value == "1")
 }
 
 fn run_docker<S: AsRef<str>>(cwd: &Path, args: &[S]) -> Result<String, OrchestratorError> {

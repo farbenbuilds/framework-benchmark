@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    const zuws = b.dependency("zuws", .{
+    const uz = b.dependency("uz", .{
         .target = target,
         .optimize = optimize,
         .debug_logs = false,
@@ -22,6 +22,6 @@ pub fn build(b: *std.Build) void {
         .with_uv = false,
     });
 
-    exe.root_module.addImport("zuws", zuws.module("zuws"));
+    exe.root_module.addImport("uz", uz.module("zuws"));
     b.installArtifact(exe);
 }

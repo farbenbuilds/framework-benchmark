@@ -1,10 +1,10 @@
 use crate::error::LoadGenError;
 use crate::histogram::LatencyRecorder;
+use crate::io::{connect_until, read_until, retry_after_error, wait_until, write_until};
+use crate::response::{MAX_RESPONSE_BYTES, parse_response};
 use crate::stats::WorkerStats;
 use std::time::{Duration, Instant};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-
 struct WorkerTask<'a> {
     deadline: Instant,
     pipeline_depth: usize,
@@ -12,7 +12,21 @@ struct WorkerTask<'a> {
     recorder: &'a mut LatencyRecorder,
     stats: &'a mut WorkerStats,
 }
-
+struct ResponseProgress {
+    completed: usize,
+    consumed: usize,
+    closes_connection: bool,
+}
+pub(crate) struct WorkerBuffers {
+    read_buf: Vec<u8>,
+    starts: Vec<Instant>,
+}
+pub(crate) fn preallocate_worker_buffers(pipeline_depth: usize) -> WorkerBuffers {
+    WorkerBuffers {
+        read_buf: vec![0; MAX_RESPONSE_BYTES],
+        starts: Vec::with_capacity(pipeline_depth),
+    }
+}
 pub async fn run_connection_worker(
     target_addr: &str,
     request_bytes: &[u8],
@@ -22,6 +36,32 @@ pub async fn run_connection_worker(
     recorder: &mut LatencyRecorder,
     stats: &mut WorkerStats,
 ) -> Result<(), LoadGenError> {
+    run_connection_worker_with_buffers(
+        target_addr,
+        request_bytes,
+        deadline,
+        pipeline_depth,
+        expected_interval_us,
+        recorder,
+        stats,
+        preallocate_worker_buffers(pipeline_depth),
+    )
+    .await
+}
+#[expect(
+    clippy::too_many_arguments,
+    reason = "hot path passes borrowed state explicitly"
+)]
+pub(crate) async fn run_connection_worker_with_buffers(
+    target_addr: &str,
+    request_bytes: &[u8],
+    deadline: Instant,
+    pipeline_depth: usize,
+    expected_interval_us: u64,
+    recorder: &mut LatencyRecorder,
+    stats: &mut WorkerStats,
+    mut buffers: WorkerBuffers,
+) -> Result<(), LoadGenError> {
     let mut task = WorkerTask {
         deadline,
         pipeline_depth,
@@ -30,126 +70,131 @@ pub async fn run_connection_worker(
         recorder,
         stats,
     };
-    let mut read_buf = Vec::with_capacity(32_768);
-
     while Instant::now() < task.deadline {
-        let Ok(mut stream) = TcpStream::connect(target_addr).await else {
+        let stream = connect_until(target_addr, task.deadline).await;
+        let Ok(mut stream) = stream else {
             task.stats.record_error();
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            retry_after_error(task.deadline).await;
             continue;
         };
-
         let _ = stream.set_nodelay(true);
-
-        if process_connection_loop(&mut stream, request_bytes, &mut read_buf, &mut task)
-            .await
-            .is_err()
+        if process_connection_loop(
+            &mut stream,
+            request_bytes,
+            &mut buffers.read_buf,
+            &mut buffers.starts,
+            &mut task,
+        )
+        .await
+        .is_err()
         {
             task.stats.record_error();
         }
     }
     Ok(())
 }
-
 async fn process_connection_loop(
     stream: &mut TcpStream,
     request_bytes: &[u8],
-    read_buf: &mut Vec<u8>,
+    read_buf: &mut [u8],
+    starts: &mut Vec<Instant>,
     task: &mut WorkerTask<'_>,
 ) -> Result<(), LoadGenError> {
-    let depth = task.pipeline_depth.max(1);
     let mut next_issue = Instant::now();
-    let mut starts = Vec::with_capacity(depth);
-
-    while Instant::now() < task.deadline {
-        wait_until(next_issue).await;
-        if Instant::now() >= task.deadline {
-            return Ok(());
-        }
-
+    let mut used = 0;
+    while wait_until(next_issue, task.deadline).await {
         starts.clear();
-        for _ in 0..depth {
-            let req_start = Instant::now();
-            stream.write_all(request_bytes).await?;
-            starts.push(req_start);
-            if let Some(interval) = task.expected_interval {
-                next_issue += interval;
-            }
+        for _ in 0..task.pipeline_depth {
+            let start = Instant::now();
+            write_until(stream, request_bytes, task.deadline).await?;
+            starts.push(start);
+            next_issue = next_issue_at(task.expected_interval, next_issue, task.deadline);
         }
-
-        let mut completed = 0;
-        while completed < depth {
-            let before = read_buf.len();
-            read_buf.resize(before + 16_384, 0);
-            let n = stream.read(&mut read_buf[before..]).await?;
-            read_buf.truncate(before + n);
-            if n == 0 {
-                return Ok(());
-            }
-            completed += record_responses(read_buf, &starts[completed..], task)?;
-        }
+        used = read_batch(stream, read_buf, used, starts, task).await?;
     }
     Ok(())
 }
 
-async fn wait_until(when: Instant) {
-    if when > Instant::now() {
-        tokio::time::sleep_until(tokio::time::Instant::from_std(when)).await;
-    }
+fn next_issue_at(interval: Option<Duration>, current: Instant, deadline: Instant) -> Instant {
+    interval
+        .and_then(|interval| current.checked_add(interval))
+        .unwrap_or(current)
+        .min(deadline)
 }
 
-fn record_responses(
-    bytes: &mut Vec<u8>,
+async fn read_batch(
+    stream: &mut TcpStream,
+    read_buf: &mut [u8],
+    mut used: usize,
     starts: &[Instant],
     task: &mut WorkerTask<'_>,
 ) -> Result<usize, LoadGenError> {
-    let mut offset = 0;
     let mut completed = 0;
-
     while completed < starts.len() {
-        let Some((status, response_len)) = parse_response(&bytes[offset..])? else {
+        let progress = record_responses(&read_buf[..used], &starts[completed..], task)?;
+        completed += progress.completed;
+        if progress.consumed > 0 {
+            read_buf.copy_within(progress.consumed..used, 0);
+            used -= progress.consumed;
+        }
+        if progress.closes_connection && completed == starts.len() {
+            return Ok(0);
+        }
+        if progress.closes_connection {
+            return Err(LoadGenError::Protocol(
+                "connection closed before pipeline drained".into(),
+            ));
+        }
+        if completed == starts.len() {
+            return Ok(used);
+        }
+        if used == read_buf.len() {
+            return Err(LoadGenError::Protocol(
+                "response exceeds read buffer".into(),
+            ));
+        }
+        let read = read_until(stream, &mut read_buf[used..], task.deadline).await?;
+        if read == 0 {
+            return Err(LoadGenError::Protocol(
+                "connection closed before response".into(),
+            ));
+        }
+        used += read;
+    }
+    Ok(used)
+}
+
+fn record_responses(
+    bytes: &[u8],
+    starts: &[Instant],
+    task: &mut WorkerTask<'_>,
+) -> Result<ResponseProgress, LoadGenError> {
+    let mut completed = 0;
+    let mut consumed = 0;
+    let mut closes_connection = false;
+    while completed < starts.len() {
+        let Some(response) = parse_response(&bytes[consumed..])? else {
             break;
         };
+        consumed += response.len;
+        if (100..200).contains(&response.status) {
+            continue;
+        }
         let elapsed = starts[completed].elapsed().as_micros() as u64;
         let interval = task
             .expected_interval
             .map_or(0, |value| value.as_micros() as u64);
         task.recorder.record_micros_corrected(elapsed, interval);
-        task.stats.record_response(status, response_len);
-        offset += response_len;
+        task.stats.record_response(response.status, response.len);
         completed += 1;
+        closes_connection = response.closes_connection;
+        if closes_connection {
+            break;
+        }
     }
-    if offset > 0 {
-        bytes.drain(..offset);
-    }
-    Ok(completed)
-}
-
-fn parse_response(bytes: &[u8]) -> Result<Option<(u16, usize)>, LoadGenError> {
-    let mut headers = [httparse::EMPTY_HEADER; 16];
-    let (header_len, status) = {
-        let mut response = httparse::Response::new(&mut headers);
-        let httparse::Status::Complete(header_len) = response
-            .parse(bytes)
-            .map_err(|error| LoadGenError::Protocol(error.to_string()))?
-        else {
-            return Ok(None);
-        };
-        (header_len, response.code.unwrap_or(200))
-    };
-    let body_len = headers
-        .iter()
-        .find(|header| header.name.eq_ignore_ascii_case("content-length"))
-        .map_or(Ok(0), |header| {
-            std::str::from_utf8(header.value)
-                .map_err(|error| LoadGenError::Protocol(error.to_string()))?
-                .trim()
-                .parse::<usize>()
-                .map_err(|error| LoadGenError::Protocol(error.to_string()))
-        })?;
-    let response_len = header_len + body_len;
-    if bytes.len() < response_len {
-        return Ok(None);
-    }
-    Ok(Some((status, response_len)))
+    Ok(ResponseProgress {
+        completed,
+        consumed,
+        closes_connection,
+    })
 }

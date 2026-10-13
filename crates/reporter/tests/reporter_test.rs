@@ -2,11 +2,16 @@ use common::result::{
     LatencyDistribution, LibcVariant, MachineInfo, ResourceUsage, RunResult, StatusCodeCounts,
     TestMetrics,
 };
+use reporter::archive::{
+    timestamped_result_path, timestamped_result_relative_path, write_result_json,
+};
 use reporter::chart::generate_throughput_svg;
 use reporter::index::{HistoricalIndex, update_historical_index};
 use reporter::logic::aggregate_leaderboard;
 use reporter::markdown::render_markdown_table;
 use std::fs;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn create_dummy_run(name: &str, libc: LibcVariant, rps: f64, p99_us: u64) -> RunResult {
     RunResult {
@@ -55,6 +60,19 @@ fn create_dummy_run(name: &str, libc: LibcVariant, rps: f64, p99_us: u64) -> Run
     }
 }
 
+fn temporary_dir(label: &str) -> PathBuf {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock must be after unix epoch")
+        .as_nanos();
+    let path = std::env::temp_dir().join(format!(
+        "reporter-{label}-{}-{timestamp}",
+        std::process::id()
+    ));
+    fs::create_dir_all(&path).expect("create test directory failed");
+    path
+}
+
 #[test]
 fn test_leaderboard_ranking_and_markdown() {
     let r1 = create_dummy_run("axum", LibcVariant::Glibc, 500_000.0, 500);
@@ -86,22 +104,64 @@ fn test_svg_chart_generation() {
 
 #[test]
 fn test_historical_index_update() {
-    let temp_dir = std::env::temp_dir().join("bench_index_test");
+    let temp_dir = temporary_dir("index");
     let index_file = temp_dir.join("index.json");
-    if index_file.exists() {
-        let _ = fs::remove_file(&index_file);
-    }
 
     let r1 = create_dummy_run("axum", LibcVariant::Glibc, 500_000.0, 500);
     update_historical_index(&index_file, &r1, "results/data/2026/10/test-run.json")
         .expect("update index failed");
+    update_historical_index(
+        &index_file,
+        &r1,
+        "results/data/2026/10/retried-test-run.json",
+    )
+    .expect("repeat index update failed");
 
     let content = fs::read_to_string(&index_file).expect("read index failed");
     let index: HistoricalIndex = serde_json::from_str(&content).expect("parse index failed");
-    assert_eq!(index.runs.len(), 1);
+    assert_eq!(
+        index.runs.len(),
+        1,
+        "the same run id must not duplicate history"
+    );
     assert_eq!(index.runs[0].framework_name, "axum");
     assert_eq!(index.runs[0].libc, "glibc");
+    assert_eq!(
+        index.runs[0].relative_json_path,
+        "results/data/2026/10/retried-test-run.json"
+    );
 
-    let _ = fs::remove_file(index_file);
-    let _ = fs::remove_dir(temp_dir);
+    fs::remove_dir_all(temp_dir).expect("remove test directory failed");
+}
+
+#[test]
+fn test_timestamped_artifact_path_rejects_collision() {
+    let temp_dir = temporary_dir("archive");
+    let run = create_dummy_run("axum", LibcVariant::Glibc, 500_000.0, 500);
+    let path = timestamped_result_path(&temp_dir, &run).expect("build artifact path failed");
+
+    assert!(path.ends_with("data/2023/11/1700000000-test-run.json"));
+    let mut later_run = run.clone();
+    later_run.timestamp_epoch_secs += 1;
+    let later_path =
+        timestamped_result_path(&temp_dir, &later_run).expect("build later artifact path failed");
+    assert_ne!(path, later_path);
+    write_result_json(&path, &run).expect("write artifact failed");
+    let error = write_result_json(&path, &run).expect_err("artifact collision must fail");
+
+    assert!(matches!(
+        error,
+        reporter::ReporterError::Io(error) if error.kind() == std::io::ErrorKind::AlreadyExists
+    ));
+    fs::remove_dir_all(temp_dir).expect("remove test directory failed");
+}
+
+#[test]
+fn test_timestamped_artifact_path_rejects_unsafe_run_id() {
+    let mut run = create_dummy_run("axum", LibcVariant::Glibc, 500_000.0, 500);
+    run.run_id = "../outside".into();
+
+    let error = timestamped_result_relative_path(&run).expect_err("unsafe run id must fail");
+
+    assert!(error.to_string().contains("run id"));
 }

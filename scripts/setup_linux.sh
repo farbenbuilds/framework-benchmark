@@ -1,32 +1,20 @@
 #!/usr/bin/env sh
 set -eu
 
-STATE_DIR="${BENCHMARK_STATE_DIR:-/var/lib/framework-benchmark}"
-APPLY=0
+state_dir=${BENCHMARK_STATE_DIR:-/var/lib/framework-benchmark}
 
-if [ "${1:-}" = "--apply" ]; then
-    APPLY=1
-fi
-
-if [ "$APPLY" -eq 0 ]; then
-    echo "Dry run. Re-run as root with --apply to install packages and tune the host."
-    exit 0
-fi
-
-if [ "$(id -u)" -ne 0 ]; then
-    echo "setup_linux.sh --apply must run as root." >&2
-    exit 1
-fi
+usage() {
+    echo 'usage: sudo scripts/setup_linux.sh --apply' >&2
+}
 
 install_apt() {
     apt-get update
-    apt-get install -y build-essential ca-certificates curl git libssl-dev pkg-config \
-        linux-tools-generic docker.io
-    apt-get install -y docker-compose-plugin || apt-get install -y docker-compose-v2
+    apt-get install -y build-essential ca-certificates curl git iproute2 iputils-ping \
+        linux-tools-generic docker.io docker-compose-v2
 }
 
 install_dnf() {
-    dnf install -y gcc gcc-c++ make ca-certificates curl git openssl-devel \
+    dnf install -y gcc gcc-c++ make ca-certificates curl git iproute iputils \
         perf docker docker-compose-plugin
 }
 
@@ -39,25 +27,20 @@ install_packages() {
         install_dnf
         return
     fi
-    echo "Unsupported package manager; install Docker, Rust, perf, and build tools manually." >&2
+    echo 'Unsupported package manager; install Docker, Compose, perf, and build tools.' >&2
     exit 1
 }
 
-install_rust() {
-    if command -v cargo >/dev/null 2>&1; then
-        return
-    fi
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
-}
-
 save_sysctls() {
-    mkdir -p "$STATE_DIR"
-    [ -f "$STATE_DIR/sysctl.before" ] && return
-    : > "$STATE_DIR/sysctl.before"
+    umask 077
+    mkdir -p "$state_dir"
+    [ -f "$state_dir/sysctl.before" ] && return
+    : > "$state_dir/sysctl.before"
     for key in net.core.somaxconn net.ipv4.tcp_max_syn_backlog \
         net.ipv4.ip_local_port_range net.ipv4.tcp_tw_reuse fs.file-max \
         kernel.perf_event_paranoid; do
-        printf '%s=%s\n' "$key" "$(sysctl -n "$key")" >> "$STATE_DIR/sysctl.before"
+        value=$(sysctl -n "$key") || continue
+        printf '%s=%s\n' "$key" "$value" >> "$state_dir/sysctl.before"
     done
 }
 
@@ -77,10 +60,20 @@ set_governor() {
     done
 }
 
+if [ "$#" -ne 1 ] || [ "$1" != --apply ]; then
+    usage
+    exit 2
+fi
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'setup_linux.sh --apply must run as root.' >&2
+    exit 1
+fi
+
 install_packages
-install_rust
 save_sysctls
 apply_tuning
 set_governor
-systemctl enable --now docker 2>/dev/null || true
-echo "Host setup complete. Re-login after adding your benchmark user to the docker group."
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl enable --now docker
+fi
+echo "Host tuning applied. Restore with BENCHMARK_STATE_DIR=$state_dir scripts/cleanup_environment.sh --apply."

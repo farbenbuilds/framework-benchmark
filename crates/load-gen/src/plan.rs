@@ -20,3 +20,55 @@ impl Default for BenchmarkPlan {
         }
     }
 }
+use crate::LoadGenError;
+
+impl BenchmarkPlan {
+    pub fn validate(&self) -> Result<(), LoadGenError> {
+        if self.target_addr.trim().is_empty() {
+            return Err(LoadGenError::InvalidPlan("target address is empty".into()));
+        }
+        if !self.path.starts_with('/') {
+            return Err(LoadGenError::InvalidPlan("path must start with '/'".into()));
+        }
+        if self.concurrency == 0 {
+            return Err(LoadGenError::InvalidPlan(
+                "concurrency must be positive".into(),
+            ));
+        }
+        if self.duration_secs == 0 {
+            return Err(LoadGenError::InvalidPlan(
+                "duration must be positive".into(),
+            ));
+        }
+        if self.pipeline_depth == 0 || self.pipeline_depth > 1024 {
+            return Err(LoadGenError::InvalidPlan(
+                "pipeline depth must be between 1 and 1024".into(),
+            ));
+        }
+        if self.target_rps == Some(0) {
+            return Err(LoadGenError::InvalidPlan(
+                "target RPS must be positive".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BenchmarkPlan;
+
+    #[test]
+    fn validate_rejects_invalid_measurement_bounds() {
+        let plan = BenchmarkPlan {
+            duration_secs: 0,
+            ..BenchmarkPlan::default()
+        };
+        assert!(plan.validate().is_err());
+    }
+
+    #[test]
+    fn validate_accepts_default_plan() {
+        assert!(BenchmarkPlan::default().validate().is_ok());
+    }
+}

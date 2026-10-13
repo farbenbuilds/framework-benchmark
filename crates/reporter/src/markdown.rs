@@ -11,15 +11,20 @@ const END_MARKER: &str = "<!-- BENCHMARK_RESULTS_END -->";
 pub fn render_markdown_table(rows: &[LeaderboardRow], category: &str) -> String {
     let mut out = String::new();
     let _ = writeln!(out, "### Benchmark Leaderboard: {category}\n");
-    out.push_str("| Rank | Framework | Libc | Requests/sec | P99 Latency (ms) | Peak RSS (MB) |\n");
-    out.push_str("| :--- | :-------- | :--- | -----------: | ---------------: | ------------: |\n");
+    out.push_str(
+        "| Rank | Framework | Version | Libc | Requests/sec | P99 Latency (ms) | Peak RSS (MB) |\n",
+    );
+    out.push_str(
+        "| :--- | :-------- | :------ | :--- | -----------: | ---------------: | ------------: |\n",
+    );
 
     for row in rows {
         let _ = writeln!(
             out,
-            "| {} | {} | {} | {:.2} | {:.3} | {:.2} |",
+            "| {} | {} | {} | {} | {:.2} | {:.3} | {:.2} |",
             row.rank,
             row.framework,
+            row.framework_version,
             row.libc,
             row.requests_per_sec,
             row.p99_latency_ms,
@@ -29,10 +34,34 @@ pub fn render_markdown_table(rows: &[LeaderboardRow], category: &str) -> String 
     out
 }
 
+pub fn render_readme_leaderboards(results: &[RunResult]) -> String {
+    let mut categories: Vec<&str> = results
+        .iter()
+        .flat_map(|result| result.benchmarks.iter().map(|test| test.category.as_str()))
+        .collect();
+    categories.sort_unstable();
+    categories.dedup();
+
+    if categories.is_empty() {
+        return "\n*No benchmark results recorded yet.*\n".into();
+    }
+
+    let mut section = String::from("\n\n");
+    for category in categories {
+        let rows = aggregate_leaderboard(results, category);
+        section.push_str(&render_markdown_table(&rows, category));
+        section.push('\n');
+    }
+    section
+}
+
 pub fn update_readme_leaderboard(
     readme_path: &Path,
     results: &[RunResult],
 ) -> Result<(), ReporterError> {
+    if results.is_empty() {
+        return Ok(());
+    }
     if !readme_path.exists() {
         return Ok(());
     }
@@ -47,29 +76,7 @@ pub fn update_readme_leaderboard(
         return Ok(());
     };
 
-    let categories = [
-        "plaintext",
-        "json",
-        "db_single",
-        "db_multi",
-        "fortunes",
-        "updates",
-        "websocket",
-    ];
-    let mut section = String::from("\n\n");
-
-    for cat in categories {
-        let rows = aggregate_leaderboard(results, cat);
-        if rows.is_empty() {
-            continue;
-        }
-        section.push_str(&render_markdown_table(&rows, cat));
-        section.push('\n');
-    }
-
-    if section.trim().is_empty() {
-        section = "\n*No benchmark results recorded yet.*\n".to_string();
-    }
+    let section = render_readme_leaderboards(results);
 
     let mut new_content = String::with_capacity(content.len() + section.len());
     new_content.push_str(&content[..start_pos]);

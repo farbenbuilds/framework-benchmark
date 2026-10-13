@@ -4,7 +4,7 @@ use common::result::RunResult;
 pub struct LeaderboardRow {
     pub rank: usize,
     pub framework: String,
-    pub language: String,
+    pub framework_version: String,
     pub libc: String,
     pub requests_per_sec: f64,
     pub p99_latency_ms: f64,
@@ -27,7 +27,7 @@ pub fn aggregate_leaderboard(results: &[RunResult], category: &str) -> Vec<Leade
                 entries.push(LeaderboardRow {
                     rank: 0,
                     framework: run.framework_name.clone(),
-                    language: run.framework_version.clone(),
+                    framework_version: run.framework_version.clone(),
                     libc: libc_str.into(),
                     requests_per_sec: test.requests_per_sec,
                     p99_latency_ms: p99_ms,
@@ -39,8 +39,11 @@ pub fn aggregate_leaderboard(results: &[RunResult], category: &str) -> Vec<Leade
 
     entries.sort_by(|a, b| {
         b.requests_per_sec
-            .partial_cmp(&a.requests_per_sec)
-            .unwrap_or(std::cmp::Ordering::Equal)
+            .total_cmp(&a.requests_per_sec)
+            .then_with(|| a.p99_latency_ms.total_cmp(&b.p99_latency_ms))
+            .then_with(|| a.framework.cmp(&b.framework))
+            .then_with(|| a.framework_version.cmp(&b.framework_version))
+            .then_with(|| a.libc.cmp(&b.libc))
     });
 
     for (idx, row) in entries.iter_mut().enumerate() {

@@ -1,35 +1,44 @@
 #!/usr/bin/env sh
 set -eu
 
-if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <context_dir> <tag> [target_libc]" >&2
+usage() {
+    echo "usage: build_container.sh <context_dir> <tag> [glibc|musl]" >&2
+}
+
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    usage
+    exit 2
+fi
+
+context_dir=$1
+tag=$2
+target_libc=${3:-glibc}
+runtime=${CONTAINER_RUNTIME:-docker}
+pull=${BENCHMARK_IMAGE_PULL:-0}
+no_cache=${BENCHMARK_NO_CACHE:-0}
+
+case $target_libc in
+    glibc|musl) ;;
+    *) echo "libc must be glibc or musl" >&2; exit 2 ;;
+esac
+case $pull:$no_cache in
+    0:0|0:1|1:0|1:1) ;;
+    *) echo "BENCHMARK_IMAGE_PULL and BENCHMARK_NO_CACHE must be 0 or 1" >&2; exit 2 ;;
+esac
+
+dockerfile=$context_dir/Dockerfile.$target_libc
+if [ ! -d "$context_dir" ] || [ ! -f "$dockerfile" ]; then
+    echo "Dockerfile not found: $dockerfile" >&2
+    exit 1
+fi
+if ! command -v "$runtime" >/dev/null 2>&1; then
+    echo "Container runtime not found: $runtime" >&2
     exit 1
 fi
 
-CONTEXT_DIR="$1"
-TAG="$2"
-TARGET_LIBC="${3:-glibc}"
-CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+set -- build --file "$dockerfile" --tag "$tag"
+[ "$pull" = 1 ] && set -- "$@" --pull
+[ "$no_cache" = 1 ] && set -- "$@" --no-cache
+"$runtime" "$@" "$context_dir"
 
-DOCKERFILE="${CONTEXT_DIR}/Dockerfile.${TARGET_LIBC}"
-
-if [ ! -f "$DOCKERFILE" ]; then
-    echo "Dockerfile not found: $DOCKERFILE" >&2
-    exit 1
-fi
-
-if ! command -v "$CONTAINER_RUNTIME" >/dev/null 2>&1; then
-    echo "Container runtime not found: $CONTAINER_RUNTIME" >&2
-    exit 1
-fi
-
-echo "Building container image: ${TAG} (${TARGET_LIBC}) without cache drift..."
-
-"$CONTAINER_RUNTIME" build \
-    --no-cache \
-    --pull \
-    --tag "${TAG}" \
-    --file "${DOCKERFILE}" \
-    "${CONTEXT_DIR}"
-
-echo "Build complete: ${TAG}"
+echo "Built $tag ($target_libc)."
