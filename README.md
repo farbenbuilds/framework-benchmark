@@ -6,11 +6,11 @@ Inspired by [TechEmpower FrameworkBenchmarks](https://github.com/TechEmpower/Fra
 
 ## Key Features
 
-- **Multi-Category Workloads**: Plaintext, JSON serialization, single DB query, multiple DB queries, Fortunes (HTML escaping), data updates, and WebSockets.
+- **TechEmpower and HTTP-Arena Workloads**: `plaintext`, `json`, `single_query`, `multiple_queries`, `fortunes`, `data_updates`, HTTP/1.1 pipelining, connection churn, paced traffic, and WebSocket echo.
 - **Dual-Libc Support**: Evaluates frameworks built against both **GNU C Library (glibc)** and **musl libc** (Alpine/Distroless).
 - **Extensible Framework Registry**: Declarative framework definitions in `frameworks/` using **Docker** and **Nix**.
 - **Native Rust Harness**: Ultra-low-overhead asynchronous load generator and Linux resource profiler (cgroups v2, `/proc`, peak RSS, CPU utilization).
-- **Automated Results Pipeline**: The benchmark runner machine executes scheduled benchmark runs, automatically updates results in this `README.md` and `results/`, and pushes updates directly back to GitHub.
+- **Publishable Artifacts**: Immutable JSON results, category charts, and complete Markdown tables are generated locally. A labelled dedicated runner publishes reviewed results to this `README.md`.
 
 ## Project Roadmap and Architecture
 
@@ -23,7 +23,7 @@ For the detailed architectural specification, component breakdown, and step-by-s
 ## Benchmark Results
 
 <!-- BENCHMARK_RESULTS_START -->
-*Benchmark runs will be automatically populated here by the benchmark runner agent.*
+*No verified benchmark run has been published yet. Results are only committed after both libc variants complete on a labelled dedicated host.*
 <!-- BENCHMARK_RESULTS_END -->
 
 ## License

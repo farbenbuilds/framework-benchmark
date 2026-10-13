@@ -72,6 +72,8 @@ BENCHMARK_SMALL_HOST=1 BENCHMARK_LIBC=glibc scripts/run_benchmarks.sh
 
 The profile reduces harness pressure, but framework image builds can still need significant memory. Keep swap enabled during builds, stop unrelated services, and run frameworks sequentially. Use a larger dedicated host for comparative full-matrix publication.
 
+Each plaintext-capable adapter also runs bounded HTTP-Arena supplemental profiles: `http1_pipelining_16`, `connection_churn`, and `paced_plaintext`. The paced profile targets 100 requests per second per configured worker; it is a latency-under-load profile, not a peak-throughput ranking.
+
 The compatibility entry point delegates to the all-framework runner. It validates the host, builds the release orchestrator, then lets the orchestrator build, start, measure, and remove each selected libc image. Start the repository database yourself before selecting frameworks with database capabilities.
 
 ```sh
@@ -94,7 +96,7 @@ AUTOBAHN_TARGET_URL=ws://127.0.0.1:8080/ws scripts/run_autobahn_suite.sh
 
 ## 5. Inspect, compare, and retain results
 
-Immutable JSON artifacts are stored under `results/data/YYYY/MM/`; the index is `results/index.json`, and generated tables/charts are in `results/`. Review the intended result diff before staging it:
+Immutable JSON artifacts are stored under `results/data/YYYY/MM/`; the index is `results/index.json`, and generated tables/charts are in `results/`. The orchestrator replaces the README block once per selected matrix so its tables only compare results from that invocation. Review the intended result diff before staging it:
 
 ```sh
 find results -type f | sort

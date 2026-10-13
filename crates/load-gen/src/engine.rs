@@ -1,7 +1,7 @@
 use crate::client::{preallocate_worker_buffers, run_connection_worker_with_buffers};
 use crate::error::LoadGenError;
 use crate::histogram::LatencyRecorder;
-use crate::plan::BenchmarkPlan;
+use crate::plan::{BenchmarkPlan, ConnectionMode};
 use crate::stats::WorkerStats;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -19,9 +19,13 @@ pub async fn execute_benchmark(
     plan: BenchmarkPlan,
 ) -> Result<BenchmarkExecutionResult, LoadGenError> {
     plan.validate()?;
+    let connection = match plan.connection_mode {
+        ConnectionMode::KeepAlive => "keep-alive",
+        ConnectionMode::Churn => "close",
+    };
     let req_str = format!(
-        "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: keep-alive\r\nUser-Agent: framework-benchmark\r\n\r\n",
-        plan.path, plan.target_addr
+        "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: {connection}\r\nUser-Agent: framework-benchmark\r\n\r\n",
+        plan.path, plan.target_addr,
     );
     let req_bytes = Arc::<[u8]>::from(req_str.into_bytes());
     let target_addr: Arc<str> = plan.target_addr.into();
@@ -46,6 +50,7 @@ pub async fn execute_benchmark(
         let addr = Arc::clone(&target_addr);
         let bytes = Arc::clone(&req_bytes);
         let depth = plan.pipeline_depth;
+        let connection_mode = plan.connection_mode;
         let interval = expected_interval_us;
 
         let handle = tokio::spawn(async move {
@@ -56,6 +61,7 @@ pub async fn execute_benchmark(
                 &bytes,
                 deadline,
                 depth,
+                connection_mode,
                 interval,
                 &mut recorder,
                 &mut stats,

@@ -33,11 +33,12 @@
 ## Benchmark Categories
 1. **Plaintext (`/plaintext`)**: Tests raw protocol framing, parser overhead, and socket throughput with `Hello, World!`.
 2. **JSON Serialization (`/json`)**: Tests JSON serialization and memory allocation with `{"message":"Hello, World!"}`.
-3. **Single Database Query (`/db`)**: Tests async DB driver and connection pool overhead fetching a single row.
-4. **Multiple Database Queries (`/queries?queries=N`)**: Stresses connection multiplexing fetching $N$ rows.
+3. **Single Database Query (`single_query`, `/db`)**: Tests async DB driver and connection pool overhead fetching a single row.
+4. **Multiple Database Queries (`multiple_queries`, `/queries?queries=N`)**: Stresses connection multiplexing fetching $N$ rows.
 5. **Fortunes (`/fortunes`)**: Reads rows from DB, sorts them, and renders HTML with entity escaping.
-6. **Data Updates (`/updates?queries=N`)**: Updates $N$ database records in a transaction and persists them.
-7. **WebSocket Echo (`/ws-echo`)**: Measures round-trip frame latency and bi-directional message throughput.
+6. **Data Updates (`data_updates`, `/updates?queries=N`)**: Updates $N$ database records in a transaction and persists them.
+7. **WebSocket Echo (`/ws`)**: Measures round-trip frame latency and bi-directional message throughput.
+8. **HTTP-Arena Profiles**: `http1_pipelining_16`, `connection_churn`, and `paced_plaintext` exercise bounded pipeline, socket-churn, and constant-rate behavior.
 
 ## Captured Metrics
 - **Throughput**: Requests per second (RPS), network transfer bandwidth (MB/s).

@@ -10,6 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct ContainerTarget {
     pub name: String,
     pub pid: u32,
+    pub cgroup_dir: Option<std::path::PathBuf>,
 }
 
 pub fn start_container(
@@ -71,15 +72,40 @@ pub fn start_container(
     args.push(image);
     let output = run_docker(framework_dir, &args)?;
     let id = output.trim();
-    let pid = run_docker(framework_dir, &["inspect", "--format={{.State.Pid}}", id])?
-        .trim()
-        .parse()
-        .map_err(|error| OrchestratorError::Process(format!("invalid container pid: {error}")))?;
-    Ok(ContainerTarget { name, pid })
+    let pid = match container_pid(framework_dir, id) {
+        Ok(pid) => pid,
+        Err(error) => {
+            let _ = stop_container(framework_dir, &name);
+            return Err(error);
+        }
+    };
+    Ok(ContainerTarget {
+        name,
+        pid,
+        cgroup_dir: cgroup_dir_for_pid(pid),
+    })
 }
 
-pub fn stop_container(framework_dir: &Path, target: &ContainerTarget) {
-    let _ = run_docker(framework_dir, &["rm", "--force", &target.name]);
+pub fn stop_container(framework_dir: &Path, name: &str) -> Result<(), OrchestratorError> {
+    run_docker(framework_dir, &["rm", "--force", name]).map(|_| ())
+}
+
+fn container_pid(framework_dir: &Path, id: &str) -> Result<u32, OrchestratorError> {
+    run_docker(framework_dir, &["inspect", "--format={{.State.Pid}}", id])?
+        .trim()
+        .parse()
+        .map_err(|error| OrchestratorError::Process(format!("invalid container pid: {error}")))
+}
+
+fn cgroup_dir_for_pid(pid: u32) -> Option<std::path::PathBuf> {
+    let path = format!("/proc/{pid}/cgroup");
+    let content = std::fs::read_to_string(path).ok()?;
+    cgroup_dir_from_content(&content)
+}
+
+fn cgroup_dir_from_content(content: &str) -> Option<std::path::PathBuf> {
+    let cgroup = content.lines().find_map(|line| line.strip_prefix("0::"))?;
+    Some(std::path::Path::new("/sys/fs/cgroup").join(cgroup.trim_start_matches('/')))
 }
 
 fn benchmark_workers() -> usize {
@@ -95,7 +121,8 @@ fn small_host() -> bool {
 }
 
 fn run_docker<S: AsRef<str>>(cwd: &Path, args: &[S]) -> Result<String, OrchestratorError> {
-    let output = Command::new("docker")
+    let runtime = env::var("CONTAINER_RUNTIME").unwrap_or_else(|_| "docker".into());
+    let output = Command::new(runtime)
         .args(args.iter().map(AsRef::as_ref))
         .current_dir(cwd)
         .output()?;
@@ -117,4 +144,19 @@ fn sanitize_name(name: &str) -> String {
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::cgroup_dir_from_content;
+    use std::path::Path;
+
+    #[test]
+    fn cgroup_directory_uses_the_unified_hierarchy() {
+        let content = "11:memory:/legacy\n0::/system.slice/docker.scope\n";
+        assert_eq!(
+            cgroup_dir_from_content(content).as_deref(),
+            Some(Path::new("/sys/fs/cgroup/system.slice/docker.scope"))
+        );
+    }
 }

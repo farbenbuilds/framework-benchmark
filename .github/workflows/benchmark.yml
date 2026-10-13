@@ -18,7 +18,7 @@ concurrency:
 jobs:
   benchmark:
     name: Run Benchmark Suite
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, benchmark]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

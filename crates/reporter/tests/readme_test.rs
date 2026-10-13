@@ -45,9 +45,14 @@ fn create_sample_run(name: &str, category: &str, rps: f64) -> RunResult {
                 cpu_user_pct: 70.0,
                 cpu_kernel_pct: 10.0,
                 context_switches: 1000,
-                rapl_joules: None,
+                rapl_joules: Some(12.5),
             },
-            status_codes: StatusCodeCounts::default(),
+            status_codes: StatusCodeCounts {
+                http_2xx: 99_997,
+                http_4xx: 2,
+                http_5xx: 1,
+                errors: 3,
+            },
         }],
     }
 }
@@ -87,6 +92,23 @@ fn test_render_readme_leaderboards_includes_complete_batch() {
 }
 
 #[test]
+fn test_render_readme_leaderboards_includes_all_metric_groups() {
+    let rendered = render_readme_leaderboards(&[create_sample_run("axum", "plaintext", 450_000.0)]);
+    let fields = [
+        "#### Throughput",
+        "Transfer (MB/s)",
+        "#### Latency distribution (ms)",
+        "P99.99",
+        "#### Resources and reliability",
+        "Context switches",
+        "Energy (J)",
+        "| 1 | axum | glibc | 28.00 | 32.00 | 70.00 | 10.00 | 1000 | 12.500 | 99997 | 2 | 1 | 3 |",
+    ];
+
+    assert!(fields.iter().all(|field| rendered.contains(field)));
+}
+
+#[test]
 fn test_update_readme_leaderboard_preserves_existing_output_for_empty_batch() {
     let temp_dir = std::env::temp_dir().join("bench_readme_empty_batch_test");
     fs::create_dir_all(&temp_dir).expect("create test dir failed");
@@ -101,4 +123,25 @@ fn test_update_readme_leaderboard_preserves_existing_output_for_empty_batch() {
         initial
     );
     let _ = fs::remove_dir_all(temp_dir);
+}
+
+#[test]
+fn test_update_readme_leaderboard_rejects_reverse_markers() {
+    let temp_dir = std::env::temp_dir().join("bench_readme_reverse_markers_test");
+    fs::create_dir_all(&temp_dir).expect("create test dir failed");
+    let readme_path = temp_dir.join("README.md");
+    fs::write(
+        &readme_path,
+        "<!-- BENCHMARK_RESULTS_END -->\n<!-- BENCHMARK_RESULTS_START -->\n",
+    )
+    .expect("write initial readme failed");
+
+    let error = update_readme_leaderboard(
+        &readme_path,
+        &[create_sample_run("axum", "plaintext", 450_000.0)],
+    )
+    .expect_err("reverse markers must fail");
+
+    assert!(error.to_string().contains("reverse order"));
+    fs::remove_dir_all(temp_dir).expect("remove test directory failed");
 }

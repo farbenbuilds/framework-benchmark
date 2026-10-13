@@ -44,7 +44,6 @@ The Docker-based dual-libc baseline is implemented, but a result is publishable 
 ## Next milestones
 
 - Host-managed cgroups and CPU sets for complete collector attribution.
-- Explicit paced, pipelined, connection-churn, database, and WebSocket profiles.
 - Full-matrix execution on a labelled self-hosted runner; deterministic smoke validation in hosted CI.
 - Immutable image and framework input pinning before historical comparison.
 

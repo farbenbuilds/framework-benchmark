@@ -1,4 +1,5 @@
 use crate::error::ReporterError;
+use crate::storage::replace_file;
 use common::result::RunResult;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -60,8 +61,7 @@ pub fn update_historical_index(
 
     let serialized = serde_json::to_string_pretty(&index)
         .map_err(|e| ReporterError::Formatting(format!("failed to serialize index: {e}")))?;
-    fs::write(index_file_path, serialized)?;
-    Ok(())
+    replace_file(index_file_path, serialized.as_bytes())
 }
 
 fn libc_name(libc: common::result::LibcVariant) -> &'static str {

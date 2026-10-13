@@ -79,6 +79,7 @@ startup_timeout_seconds = 2
             warmup_secs: 1,
             cooldown_secs: 0,
         },
+        extended_profiles: false,
     };
     let result = run_framework_suite_with_timing(&manifest, config)
         .await

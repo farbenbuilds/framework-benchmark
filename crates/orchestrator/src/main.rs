@@ -2,6 +2,7 @@ use common::result::LibcVariant;
 use orchestrator::discovery::discover_frameworks;
 use orchestrator::error::OrchestratorError;
 use orchestrator::runner::{BenchmarkSessionConfig, execute_framework_session};
+use reporter::update_readme_leaderboard;
 use std::env;
 use std::path::Path;
 
@@ -24,12 +25,14 @@ async fn main() -> Result<(), OrchestratorError> {
     println!("==> Discovered {} framework targets.", frameworks.len());
     let config = BenchmarkSessionConfig {
         output_dir: output_dir.to_string(),
+        readme_path: None,
         database_url: env::var("DATABASE_URL").ok(),
         manage_container: env::var("BENCHMARK_MANAGE_CONTAINER").map_or(true, |value| value != "0"),
         ..BenchmarkSessionConfig::default()
     };
     let libcs = selected_libcs()?;
 
+    let mut results = Vec::new();
     for (dir, manifest) in frameworks {
         println!(
             "==> Running target: {} [{}] from {}",
@@ -51,10 +54,15 @@ async fn main() -> Result<(), OrchestratorError> {
                         rps,
                         res.benchmarks.len()
                     );
+                    results.push(res);
                 }
                 Err(e) => eprintln!("==> Failed benchmark for {}: {e}", manifest.framework.name),
             }
         }
+    }
+
+    if !results.is_empty() {
+        update_readme_leaderboard(Path::new("README.md"), &results)?;
     }
 
     println!("==> Benchmark orchestration finished.");

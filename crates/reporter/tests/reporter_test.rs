@@ -1,6 +1,6 @@
 use common::result::{
     LatencyDistribution, LibcVariant, MachineInfo, ResourceUsage, RunResult, StatusCodeCounts,
-    TestMetrics,
+    TestMetrics, deserialize_result,
 };
 use reporter::archive::{
     timestamped_result_path, timestamped_result_relative_path, write_result_json,
@@ -147,12 +147,25 @@ fn test_timestamped_artifact_path_rejects_collision() {
         timestamped_result_path(&temp_dir, &later_run).expect("build later artifact path failed");
     assert_ne!(path, later_path);
     write_result_json(&path, &run).expect("write artifact failed");
-    let error = write_result_json(&path, &run).expect_err("artifact collision must fail");
+    let persisted = fs::read_to_string(&path).expect("read artifact failed");
+    assert_eq!(
+        deserialize_result(&persisted).expect("parse artifact failed"),
+        run
+    );
+    let mut conflicting_run = run.clone();
+    conflicting_run.framework_name = "changed".into();
+    let error =
+        write_result_json(&path, &conflicting_run).expect_err("artifact collision must fail");
 
     assert!(matches!(
         error,
         reporter::ReporterError::Io(error) if error.kind() == std::io::ErrorKind::AlreadyExists
     ));
+    let persisted = fs::read_to_string(&path).expect("read immutable artifact failed");
+    assert_eq!(
+        deserialize_result(&persisted).expect("parse artifact failed"),
+        run
+    );
     fs::remove_dir_all(temp_dir).expect("remove test directory failed");
 }
 

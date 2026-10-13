@@ -1,6 +1,8 @@
 use crate::error::LoadGenError;
 use crate::histogram::LatencyRecorder;
 use crate::io::{connect_until, read_until, retry_after_error, wait_until, write_until};
+use crate::pacing::next_issue_at;
+use crate::plan::ConnectionMode;
 use crate::response::{MAX_RESPONSE_BYTES, parse_response};
 use crate::stats::WorkerStats;
 use std::time::{Duration, Instant};
@@ -8,6 +10,7 @@ use tokio::net::TcpStream;
 struct WorkerTask<'a> {
     deadline: Instant,
     pipeline_depth: usize,
+    connection_mode: ConnectionMode,
     expected_interval: Option<Duration>,
     recorder: &'a mut LatencyRecorder,
     stats: &'a mut WorkerStats,
@@ -27,27 +30,6 @@ pub(crate) fn preallocate_worker_buffers(pipeline_depth: usize) -> WorkerBuffers
         starts: Vec::with_capacity(pipeline_depth),
     }
 }
-pub async fn run_connection_worker(
-    target_addr: &str,
-    request_bytes: &[u8],
-    deadline: Instant,
-    pipeline_depth: usize,
-    expected_interval_us: u64,
-    recorder: &mut LatencyRecorder,
-    stats: &mut WorkerStats,
-) -> Result<(), LoadGenError> {
-    run_connection_worker_with_buffers(
-        target_addr,
-        request_bytes,
-        deadline,
-        pipeline_depth,
-        expected_interval_us,
-        recorder,
-        stats,
-        preallocate_worker_buffers(pipeline_depth),
-    )
-    .await
-}
 #[expect(
     clippy::too_many_arguments,
     reason = "hot path passes borrowed state explicitly"
@@ -57,6 +39,7 @@ pub(crate) async fn run_connection_worker_with_buffers(
     request_bytes: &[u8],
     deadline: Instant,
     pipeline_depth: usize,
+    connection_mode: ConnectionMode,
     expected_interval_us: u64,
     recorder: &mut LatencyRecorder,
     stats: &mut WorkerStats,
@@ -65,6 +48,7 @@ pub(crate) async fn run_connection_worker_with_buffers(
     let mut task = WorkerTask {
         deadline,
         pipeline_depth,
+        connection_mode,
         expected_interval: (expected_interval_us > 0)
             .then(|| Duration::from_micros(expected_interval_us)),
         recorder,
@@ -102,24 +86,23 @@ async fn process_connection_loop(
 ) -> Result<(), LoadGenError> {
     let mut next_issue = Instant::now();
     let mut used = 0;
-    while wait_until(next_issue, task.deadline).await {
+    while Instant::now() < task.deadline {
         starts.clear();
         for _ in 0..task.pipeline_depth {
+            if !wait_until(next_issue, task.deadline).await {
+                return Ok(());
+            }
             let start = Instant::now();
             write_until(stream, request_bytes, task.deadline).await?;
             starts.push(start);
             next_issue = next_issue_at(task.expected_interval, next_issue, task.deadline);
         }
         used = read_batch(stream, read_buf, used, starts, task).await?;
+        if task.connection_mode == ConnectionMode::Churn {
+            return Ok(());
+        }
     }
     Ok(())
-}
-
-fn next_issue_at(interval: Option<Duration>, current: Instant, deadline: Instant) -> Instant {
-    interval
-        .and_then(|interval| current.checked_add(interval))
-        .unwrap_or(current)
-        .min(deadline)
 }
 
 async fn read_batch(
@@ -149,15 +132,11 @@ async fn read_batch(
             return Ok(used);
         }
         if used == read_buf.len() {
-            return Err(LoadGenError::Protocol(
-                "response exceeds read buffer".into(),
-            ));
+            return Err(LoadGenError::Protocol("response too large".into()));
         }
         let read = read_until(stream, &mut read_buf[used..], task.deadline).await?;
         if read == 0 {
-            return Err(LoadGenError::Protocol(
-                "connection closed before response".into(),
-            ));
+            return Err(LoadGenError::Protocol("connection closed".into()));
         }
         used += read;
     }
