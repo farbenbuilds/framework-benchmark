@@ -8,7 +8,7 @@ Phase 3 populates baseline framework implementations across major programming la
 ### 3.1 Framework Selection and Registry Setup
 - [x] Establish framework directory structure specification in `frameworks/README.md`.
 - [x] Implement user-selected benchmark targets across requested languages and runtimes:
-  - Zig: `uwebzockets`, `swerver`, `zix`, `dusty`
+  - Zig: `uwebzockets`, `swerver`, `dusty`
   - Rust: `cpeak`, `ntex`, `actix-web`
   - Go: `fib-tuned`, `fiber`, `fasthttp`
   - C# (.NET): `genhttp`, `cadente`, `aspnet-minimal`
