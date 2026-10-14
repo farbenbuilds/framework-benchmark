@@ -18,7 +18,7 @@
 
 ### CPU isolation
 - Reserve server and load-generator capacity in the host or OpenStack flavor before a run.
-- The current orchestrator records a supplied cgroup path; CPU-set creation remains an operator responsibility.
+- The orchestrator requires dedicated runs to declare server and load CPU sets, pins the load-generator process, and passes the server set to Docker.
 - Record topology and traffic placement with every publishable result.
 
 ### Cgroups v2 Resource Accounting

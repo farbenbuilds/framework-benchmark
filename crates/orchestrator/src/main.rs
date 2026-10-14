@@ -16,10 +16,9 @@ async fn main() -> Result<(), OrchestratorError> {
     println!("==> Farben Framework Benchmark Orchestrator v0.1.0");
     println!("==> Scanning framework registry at: {frameworks_dir}");
 
-    let frameworks = select_frameworks(
-        discover_frameworks(Path::new(frameworks_dir))?,
-        &env::var("BENCHMARK_FRAMEWORK_FILTER").unwrap_or_else(|_| "all".into()),
-    )?;
+    let filter = env::var("BENCHMARK_FRAMEWORK_FILTER").unwrap_or_else(|_| "all".into());
+    require_dedicated_host_for_matrix(&filter)?;
+    let frameworks = select_frameworks(discover_frameworks(Path::new(frameworks_dir))?, &filter)?;
     if frameworks.is_empty() {
         println!("==> No framework manifests found in {frameworks_dir}.");
         println!("==> Framework discovery completed without targets.");
@@ -116,5 +115,27 @@ fn selected_libcs() -> Result<Vec<LibcVariant>, OrchestratorError> {
         value => Err(OrchestratorError::Process(format!(
             "invalid BENCHMARK_LIBC: {value}"
         ))),
+    }
+}
+
+fn require_dedicated_host_for_matrix(filter: &str) -> Result<(), OrchestratorError> {
+    if !filter.trim().is_empty() && filter.trim() != "all" {
+        return Ok(());
+    }
+    if env::var("BENCHMARK_DEDICATED_HOST").is_ok_and(|value| value == "1") {
+        return Ok(());
+    }
+    Err(OrchestratorError::Process(
+        "full matrix requires BENCHMARK_DEDICATED_HOST=1".into(),
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::require_dedicated_host_for_matrix;
+
+    #[test]
+    fn single_framework_does_not_require_a_dedicated_host() {
+        assert!(require_dedicated_host_for_matrix("cpeak").is_ok());
     }
 }

@@ -1,4 +1,4 @@
-FROM dunglas/frankenphp:latest-bookworm
+FROM dunglas/frankenphp:latest-bookworm@sha256:97fce37efebd6678013ecc3751e17af8b877cc8b59b7f31a0e7b8dffb0066fa7
 WORKDIR /app
 COPY server.php /app/worker.php
 EXPOSE 8080

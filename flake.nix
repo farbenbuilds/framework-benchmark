@@ -17,8 +17,6 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        "aarch64-darwin"
-        "x86_64-darwin"
       ];
 
       perSystem = {
@@ -84,7 +82,14 @@
               else "default";
           };
       in {
-        packages.default = mkPackage pkgs;
+        packages =
+          {
+            default = mkPackage pkgs;
+          }
+          // lib.optionalAttrs isLinux {
+            server-glibc = mkPackage pkgs;
+            server-musl = mkPackage pkgsMusl;
+          };
 
         devShells =
           {

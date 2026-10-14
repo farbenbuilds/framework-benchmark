@@ -4,6 +4,7 @@ pub mod error;
 pub mod lifecycle;
 pub mod machine;
 pub mod poller;
+mod provenance;
 pub mod runner;
 mod workload;
 pub mod ws_bench;

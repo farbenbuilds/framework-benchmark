@@ -47,6 +47,14 @@ pub struct ResourceUsage {
 pub struct RunProvenance {
     pub revision: String,
     pub image_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub framework_input_sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_cpus: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub load_cpus: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cgroup_path: Option<String>,
 }
 
 impl Default for RunProvenance {
@@ -54,6 +62,10 @@ impl Default for RunProvenance {
         Self {
             revision: "unknown".into(),
             image_id: None,
+            framework_input_sha256: None,
+            target_cpus: None,
+            load_cpus: None,
+            cgroup_path: None,
         }
     }
 }

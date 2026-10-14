@@ -29,15 +29,7 @@ fn historical_index_entry(result: &RunResult, relative_path: &str) -> IndexEntry
     }
 }
 
-fn upsert_historical_index(index: &mut HistoricalIndex, entry: IndexEntry) {
-    if let Some(current) = index
-        .runs
-        .iter_mut()
-        .find(|current| current.run_id == entry.run_id)
-    {
-        *current = entry;
-        return;
-    }
+fn append_historical_index(index: &mut HistoricalIndex, entry: IndexEntry) {
     index.runs.push(entry);
 }
 
@@ -57,7 +49,7 @@ pub fn update_historical_index(
         HistoricalIndex::default()
     };
 
-    upsert_historical_index(&mut index, historical_index_entry(result, relative_path));
+    append_historical_index(&mut index, historical_index_entry(result, relative_path));
 
     let serialized = serde_json::to_string_pretty(&index)
         .map_err(|e| ReporterError::Formatting(format!("failed to serialize index: {e}")))?;

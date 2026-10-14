@@ -23,6 +23,10 @@ fn test_roundtrip_result_serialization() {
         provenance: RunProvenance {
             revision: "abc123".into(),
             image_id: Some("sha256:abc123".into()),
+            framework_input_sha256: Some("def456".into()),
+            target_cpus: Some("2-7".into()),
+            load_cpus: Some("8-15".into()),
+            cgroup_path: Some("/sys/fs/cgroup/framework-benchmark".into()),
         },
         benchmarks: vec![TestMetrics {
             category: "plaintext".into(),

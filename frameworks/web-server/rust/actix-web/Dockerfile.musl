@@ -1,10 +1,10 @@
-FROM rust:1.88-alpine3.21 AS builder
+FROM rust:1.88-alpine3.21@sha256:54e937b1530d435dc83b94f5a61ef08365127f2fefbb3789712c5d6f55bbb58c AS builder
 WORKDIR /usr/src/app
 RUN apk add --no-cache musl-dev
 COPY . .
 RUN cargo build --release
 
-FROM alpine:3.21
+FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
 WORKDIR /app
 RUN apk add --no-cache ca-certificates curl
 COPY --from=builder /usr/src/app/target/release/actix-benchmark /app/server

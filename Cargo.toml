@@ -25,6 +25,7 @@ hdrhistogram = "7.5"
 bytes = "1.10"
 http = "1.2"
 httparse = "1.10"
+sha2 = "0.10"
 
 [profile.release]
 opt-level = 3

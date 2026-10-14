@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 AS build
+FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55 AS build
 WORKDIR /src
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     cmake g++ git libboost-json1.83-dev libssl-dev make zlib1g-dev && \
@@ -10,7 +10,7 @@ RUN git init /opt/hical && git -C /opt/hical remote add origin \
 COPY CMakeLists.txt main.cpp ./
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel
 
-FROM ubuntu:24.04
+FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
 WORKDIR /app
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libboost-json1.83.0 libssl3 zlib1g && rm -rf /var/lib/apt/lists/*

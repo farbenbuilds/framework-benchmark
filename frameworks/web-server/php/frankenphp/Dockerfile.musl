@@ -1,4 +1,4 @@
-FROM dunglas/frankenphp:latest-alpine
+FROM dunglas/frankenphp:latest-alpine@sha256:5bd857d2d22dc41f1e4c332f7f5cfc11a62b3ab9ebe4ec9f012c32f47acc47aa
 WORKDIR /app
 COPY server.php /app/worker.php
 EXPOSE 8080

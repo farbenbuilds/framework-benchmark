@@ -77,6 +77,15 @@ Each plaintext-capable adapter also runs bounded HTTP-Arena supplemental profile
 The compatibility entry point delegates to the all-framework runner. It validates the host, builds the release orchestrator, then lets the orchestrator build, start, measure, and remove each selected libc image. Start the repository database yourself before selecting frameworks with database capabilities.
 
 ```sh
+BENCHMARK_DEDICATED_HOST=1 \
+BENCHMARK_TARGET_CPUS=2-7 \
+BENCHMARK_LOAD_CPUS=8-15 \
+BENCHMARK_CGROUP_PARENT=framework-benchmark \
+scripts/verify_host.sh --require-dedicated
+BENCHMARK_DEDICATED_HOST=1 \
+BENCHMARK_TARGET_CPUS=2-7 \
+BENCHMARK_LOAD_CPUS=8-15 \
+BENCHMARK_CGROUP_PARENT=framework-benchmark \
 scripts/run_benchmarks.sh
 ```
 
@@ -98,7 +107,7 @@ AUTOBAHN_TARGET_URL=ws://127.0.0.1:8080/ws scripts/run_autobahn_suite.sh
 
 ## 5. Inspect, compare, and retain results
 
-Immutable JSON artifacts are stored under `results/data/YYYY/MM/`; the index is `results/index.json`, and generated tables/charts are in `results/`. Each artifact records the Git revision, inspected local container image ID, and per-workload traffic settings. The orchestrator replaces the README block once per selected matrix so its tables only compare results from that invocation. Review the intended result diff before staging it:
+Immutable JSON artifacts are stored under `results/data/YYYY/MM/`; the index is `results/index.json`, and generated tables/charts are in `results/`. Each artifact records the Git revision, immutable framework-input SHA-256, inspected local image ID, CPU placement, cgroup path, and per-workload traffic settings. The orchestrator replaces the README block once per selected matrix so its tables only compare results from that invocation. Review the intended result diff before staging it:
 
 ```sh
 find results -type f | sort

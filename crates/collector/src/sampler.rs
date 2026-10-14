@@ -1,5 +1,5 @@
 use crate::aggregator::HarvestAggregator;
-use crate::cgroups::parse_cgroup_memory_stat;
+use crate::cgroups::{CgroupFiles, open_cgroup_files, sample_cgroup_files};
 use crate::metrics::{RuntimeCounters, apply_runtime_counters};
 use crate::procfs::{parse_statm, parse_status_switches};
 use crate::rapl::{RaplZoneSnapshot, energy_delta_joules, read_rapl_snapshot};
@@ -13,6 +13,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
+const CGROUP_INTERVAL: Duration = Duration::from_millis(100);
+
 #[derive(Debug)]
 pub struct BackgroundSampler {
     running: Arc<AtomicBool>,
@@ -25,9 +27,9 @@ pub struct BackgroundSampler {
 }
 
 #[derive(Debug)]
-struct RssSource {
-    file: Option<File>,
-    is_cgroup: bool,
+struct Sources {
+    cgroups: Option<CgroupFiles>,
+    statm: Option<File>,
 }
 
 #[derive(Debug, Default)]
@@ -44,29 +46,27 @@ impl BackgroundSampler {
     ) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let aggregator = Arc::new(Mutex::new(HarvestAggregator::default()));
-
-        let run_flag = Arc::clone(&running);
-        let agg_lock = Arc::clone(&aggregator);
-
-        let mut source = open_rss_source(target_pid, cgroup_dir);
         let counters = counter_paths(target_pid, cgroup_dir);
         let counter_start = read_counters(&counters);
-        let rapl_start = read_rapl_snapshot(Path::new("/sys/class/powercap")).unwrap_or_default();
+        let run_flag = Arc::clone(&running);
+        let agg_lock = Arc::clone(&aggregator);
+        let mut sources = open_sources(target_pid, cgroup_dir);
+        let interval = cgroup_dir.map_or(interval, |_| CGROUP_INTERVAL);
         let handle = tokio::spawn(async move {
             let mut ticker = tokio::time::interval(interval);
             while run_flag.load(Ordering::Relaxed) {
                 ticker.tick().await;
-                let sample_rss = sample_rss_bytes(&mut source);
+                let (memory_bytes, peak_bytes) = sample_memory(&mut sources);
                 let mut agg = agg_lock.lock().await;
-                agg.record_sample(sample_rss);
+                agg.record_sample(memory_bytes);
+                agg.peak_rss_bytes = agg.peak_rss_bytes.max(peak_bytes);
             }
         });
-
         Self {
             running,
             aggregator,
             handle: Some(handle),
-            rapl_start,
+            rapl_start: read_rapl_snapshot(Path::new("/sys/class/powercap")).unwrap_or_default(),
             counters,
             counter_start,
             started: Instant::now(),
@@ -76,19 +76,15 @@ impl BackgroundSampler {
     pub fn spawn_simulated(interval: Duration, static_rss: u64) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let aggregator = Arc::new(Mutex::new(HarvestAggregator::default()));
-
         let run_flag = Arc::clone(&running);
         let agg_lock = Arc::clone(&aggregator);
-
         let handle = tokio::spawn(async move {
             let mut ticker = tokio::time::interval(interval);
             while run_flag.load(Ordering::Relaxed) {
                 ticker.tick().await;
-                let mut agg = agg_lock.lock().await;
-                agg.record_sample(static_rss);
+                agg_lock.lock().await.record_sample(static_rss);
             }
         });
-
         Self {
             running,
             aggregator,
@@ -102,11 +98,10 @@ impl BackgroundSampler {
 
     pub async fn stop(mut self) -> ResourceUsage {
         self.running.store(false, Ordering::Relaxed);
-        if let Some(h) = self.handle.take() {
-            let _ = h.await;
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.await;
         }
-        let agg = self.aggregator.lock().await;
-        let mut usage = agg.clone().finalize();
+        let mut usage = self.aggregator.lock().await.clone().finalize();
         let elapsed_usec = self.started.elapsed().as_micros() as u64;
         apply_runtime_counters(
             &mut usage,
@@ -123,9 +118,10 @@ impl BackgroundSampler {
 }
 
 fn counter_paths(target_pid: Option<u32>, cgroup_dir: Option<&Path>) -> CounterPaths {
-    let cpu_stat = cgroup_dir.map(|path| path.join("cpu.stat"));
-    let status = target_pid.map(|pid| PathBuf::from(format!("/proc/{pid}/status")));
-    CounterPaths { cpu_stat, status }
+    CounterPaths {
+        cpu_stat: cgroup_dir.map(|path| path.join("cpu.stat")),
+        status: target_pid.map(|pid| PathBuf::from(format!("/proc/{pid}/status"))),
+    }
 }
 
 fn read_counters(paths: &CounterPaths) -> RuntimeCounters {
@@ -139,10 +135,8 @@ fn read_counters(paths: &CounterPaths) -> RuntimeCounters {
         .status
         .as_ref()
         .and_then(|path| std::fs::read_to_string(path).ok())
-        .map(|content| {
-            let (voluntary, involuntary) = parse_status_switches(&content);
-            voluntary.saturating_add(involuntary)
-        })
+        .map(|content| parse_status_switches(&content))
+        .map(|(voluntary, involuntary)| voluntary.saturating_add(involuntary))
         .unwrap_or_default();
     RuntimeCounters {
         user_usec,
@@ -151,30 +145,27 @@ fn read_counters(paths: &CounterPaths) -> RuntimeCounters {
     }
 }
 
-fn open_rss_source(target_pid: Option<u32>, cgroup_dir: Option<&Path>) -> RssSource {
-    if let Some(cg) = cgroup_dir {
-        let mem_path = cg.join("memory.current");
-        if let Ok(file) = File::open(mem_path) {
-            return RssSource {
-                file: Some(file),
-                is_cgroup: true,
-            };
-        }
-    }
-
-    let pid_str = target_pid.map_or_else(|| "self".to_string(), |p| p.to_string());
-    let statm_path = format!("/proc/{pid_str}/statm");
-    RssSource {
-        file: File::open(statm_path).ok(),
-        is_cgroup: false,
+fn open_sources(target_pid: Option<u32>, cgroup_dir: Option<&Path>) -> Sources {
+    let pid = target_pid.map_or_else(|| "self".to_owned(), |pid| pid.to_string());
+    Sources {
+        cgroups: cgroup_dir.map(open_cgroup_files),
+        statm: File::open(format!("/proc/{pid}/statm")).ok(),
     }
 }
 
-fn sample_rss_bytes(source: &mut RssSource) -> u64 {
-    let Some(file) = source.file.as_mut() else {
+fn sample_memory(sources: &mut Sources) -> (u64, u64) {
+    let process_rss = read_statm(&mut sources.statm);
+    let cgroup = sources.cgroups.as_mut().map(sample_cgroup_files);
+    let current = cgroup.map_or(0, |sample| sample.current_bytes);
+    let peak = cgroup.map_or(0, |sample| sample.peak_bytes);
+    (process_rss.max(current), process_rss.max(peak))
+}
+
+fn read_statm(file: &mut Option<File>) -> u64 {
+    let Some(file) = file.as_mut() else {
         return 0;
     };
-    let mut buffer = [0u8; 128];
+    let mut buffer = [0; 128];
     if file.seek(SeekFrom::Start(0)).is_err() {
         return 0;
     }
@@ -184,8 +175,5 @@ fn sample_rss_bytes(source: &mut RssSource) -> u64 {
     let Ok(content) = std::str::from_utf8(&buffer[..count]) else {
         return 0;
     };
-    if source.is_cgroup {
-        return parse_cgroup_memory_stat(content).unwrap_or(0);
-    }
     parse_statm(content, 4096).unwrap_or(0)
 }

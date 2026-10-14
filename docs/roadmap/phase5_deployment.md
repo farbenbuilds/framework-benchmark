@@ -18,6 +18,7 @@ Phase 5 automates host tuning, bare-metal runner scheduling, and GitHub pull req
 - [x] Test execution (`cargo test --workspace`).
 
 ### 5.3 Automated Benchmark Runner Lifecycle
-- [ ] Run the complete matrix only on a labelled dedicated host; hosted CI is not a defensible performance environment.
+- [x] Enforce that complete matrices run only on a labelled dedicated host; hosted CI runs a deterministic dual-libc smoke target instead.
+- [ ] Produce and review a complete dual-libc matrix on the designated host before publishing results.
 - [x] Implement runner orchestrator execution script (`scripts/run_benchmarks.sh`) and CLI (`crates/orchestrator/src/main.rs`).
 - [x] Maintain automated output generation for Markdown tables and SVG charts under `results/`.

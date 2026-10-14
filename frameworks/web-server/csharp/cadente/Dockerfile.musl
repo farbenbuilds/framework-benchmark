@@ -1,11 +1,11 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine@sha256:8e4eb048fecbd865e94fa6f0c65b592a4e783708003d12ff7097d68751817923 AS build
 WORKDIR /src
 COPY cadente.csproj ./
 RUN dotnet restore
 COPY Program.cs ./
 RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine@sha256:cf6fd09eff16d61bd7894751a652ae531800b1e0006a0b5514180afce54a0317 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 8080
