@@ -7,12 +7,20 @@ normal builds and does not change benchmark behavior.
 ## Install
 
 The Python package is distributed as `graphifyy` and installs the `graphify`
-and `graphify-mcp` commands.
+and `graphify-mcp` commands. The `mcp` extra is required: without it the MCP
+server exits with `ModuleNotFoundError: No module named 'mcp'`.
 
 ```sh
-uv tool install graphifyy
+uv tool install 'graphifyy[mcp]'
 graphify install --platform opencode
 graphify install --platform codex
+```
+
+If the server already reported that error, upgrade the tool and reconnect:
+
+```sh
+uv tool install --upgrade 'graphifyy[mcp]'
+opencode mcp list
 ```
 
 The repository already registers the MCP server for both agents:
