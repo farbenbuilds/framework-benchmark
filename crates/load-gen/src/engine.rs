@@ -39,14 +39,16 @@ pub async fn execute_benchmark(
         _ => 0,
     };
     let mut worker_buffers = Vec::with_capacity(concurrency);
+    let mut recorders = Vec::with_capacity(concurrency);
     for _ in 0..concurrency {
         worker_buffers.push(preallocate_worker_buffers(plan.pipeline_depth));
+        recorders.push(LatencyRecorder::new()?);
     }
     let start_instant = Instant::now();
     let deadline = start_instant + Duration::from_secs(plan.duration_secs);
     let mut handles = Vec::with_capacity(concurrency);
 
-    for buffers in worker_buffers {
+    for (buffers, recorder) in worker_buffers.into_iter().zip(recorders) {
         let addr = Arc::clone(&target_addr);
         let bytes = Arc::clone(&req_bytes);
         let depth = plan.pipeline_depth;
@@ -54,7 +56,7 @@ pub async fn execute_benchmark(
         let interval = expected_interval_us;
 
         let handle = tokio::spawn(async move {
-            let mut recorder = LatencyRecorder::default();
+            let mut recorder = recorder;
             let mut stats = WorkerStats::default();
             let result = run_connection_worker_with_buffers(
                 &addr,
@@ -68,7 +70,7 @@ pub async fn execute_benchmark(
                 buffers,
             )
             .await;
-            if result.is_err() {
+            if result.is_err() && Instant::now() < deadline {
                 stats.record_error();
             }
             (recorder, stats)
@@ -76,7 +78,7 @@ pub async fn execute_benchmark(
         handles.push(handle);
     }
 
-    let mut final_recorder = LatencyRecorder::default();
+    let mut final_recorder = LatencyRecorder::new()?;
     let mut final_stats = WorkerStats::default();
 
     for handle in handles {
@@ -87,6 +89,12 @@ pub async fn execute_benchmark(
             }
             Err(_) => final_stats.record_error(),
         }
+    }
+
+    if final_stats.requests_completed == 0 {
+        return Err(LoadGenError::Protocol(
+            "load generator completed no responses".into(),
+        ));
     }
 
     let actual_duration_secs = start_instant.elapsed().as_secs_f64().max(0.001);

@@ -1,8 +1,8 @@
 [framework]
 name = "workerman"
-version = "5.0.0"
+version = "5.2.3"
 language = "php"
-language_version = "8.3"
+language_version = "8.5"
 website = "https://www.workerman.net/"
 category = "web-server"
 tier = "micro"

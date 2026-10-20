@@ -1,6 +1,18 @@
 # Build artifacts
 target/
 __pycache__/
+frameworks/web-server/go/*/*-benchmark
+frameworks/web-server/rust/*/target/
+frameworks/web-server/csharp/*/bin/
+frameworks/web-server/csharp/*/obj/
+node_modules/
+.venv/
+vendor/
+frameworks/web-server/**/out
+frameworks/web-server/**/server.log
+
+# Generated code knowledge graph
+graphify-out/
 
 # Operating System
 .DS_Store

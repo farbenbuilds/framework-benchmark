@@ -11,21 +11,26 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.90"
 authors = ["Farben <contact@farben.build>"]
 license = "MIT"
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
+toml = "1.1"
 thiserror = "2.0"
-tokio = { version = "1.43", features = ["full"] }
-hdrhistogram = "7.5"
-bytes = "1.10"
-http = "1.2"
+tokio = { version = "1.54", features = [
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "time",
+    "sync",
+    "io-util",
+] }
+hdrhistogram = "7.6"
 httparse = "1.10"
-sha2 = "0.10"
+sha2 = "0.11"
 
 [profile.release]
 opt-level = 3

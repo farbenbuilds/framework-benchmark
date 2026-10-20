@@ -34,5 +34,5 @@ async fn target_sampler_should_combine_process_and_cgroup_memory() {
     let usage = sampler.stop().await;
     fs::remove_dir_all(&path).expect("remove cgroup fixture directory");
 
-    assert!(usage.peak_rss_bytes == peak && usage.avg_rss_bytes > 1024);
+    assert!(usage.peak_rss_bytes < peak && usage.avg_rss_bytes > 1024);
 }

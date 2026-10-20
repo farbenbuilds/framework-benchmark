@@ -1,0 +1,43 @@
+name: Benchmark Small-Host Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  small-host:
+    name: Cpeak bounded smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: "1.90.0"
+          components: "clippy, rustfmt"
+
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+
+      - name: Validate the bounded profile
+        run: scripts/run_small_host.sh --check-only
+
+      - name: Build and run one framework
+        run: scripts/run_small_host.sh cpeak
+
+      - name: Show generated artifacts
+        if: always()
+        run: find results -maxdepth 3 -type f 2>/dev/null | sort | head -50

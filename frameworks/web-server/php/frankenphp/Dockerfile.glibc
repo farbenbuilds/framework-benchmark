@@ -1,6 +1,11 @@
-FROM dunglas/frankenphp:latest-bookworm@sha256:97fce37efebd6678013ecc3751e17af8b877cc8b59b7f31a0e7b8dffb0066fa7
+FROM dunglas/frankenphp:1.13.1-php8.5-trixie@sha256:4a8eebee6b3bed92d01ffa6ec5b1bc2cb9c2ab7eeb546027a3f7e6a52937ebbb
 WORKDIR /app
 COPY server.php /app/worker.php
+RUN mkdir -p /config/caddy /data/caddy && chown -R 10001:10001 /app /config /data
 EXPOSE 8080
 ENV SERVER_NAME=":8080"
+ENV HOME=/tmp
+ENV XDG_CONFIG_HOME=/tmp
+ENV XDG_DATA_HOME=/tmp
+USER 10001:10001
 ENTRYPOINT ["frankenphp", "php-server", "--listen", ":8080", "--root", "/app", "--worker", "/app/worker.php"]

@@ -1,8 +1,8 @@
 [framework]
 name = "actix-web"
-version = "4.9.0"
+version = "4.17.0"
 language = "rust"
-language_version = "1.88"
+language_version = "1.90"
 website = "https://actix.rs/"
 category = "web-server"
 tier = "micro"

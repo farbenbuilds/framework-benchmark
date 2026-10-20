@@ -15,7 +15,7 @@ pub struct FuzzInjector;
 
 impl FuzzInjector {
     pub fn create_unmasked_frame(payload: &[u8]) -> Vec<u8> {
-        let mut frame = Vec::with_capacity(payload.len() + 10);
+        let mut frame = Vec::with_capacity(payload.len().saturating_add(10));
         frame.push(0x81);
         let len = payload.len();
         if len <= 125 {

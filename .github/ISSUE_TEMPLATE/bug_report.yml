@@ -47,7 +47,7 @@ body:
     attributes:
       label: Environment & Toolchain
       description: Information about your OS, Kernel version, Rust version, Docker/Nix setup, and libc (glibc/musl).
-      placeholder: E.g. Ubuntu 24.04 (Linux 6.8), Rust 1.85, Docker 27.0, Nix 2.24
+      placeholder: E.g. Ubuntu 24.04 (Linux 6.8), Rust 1.90, Docker 27.0, Nix 2.30
     validations:
       required: true
   - type: textarea

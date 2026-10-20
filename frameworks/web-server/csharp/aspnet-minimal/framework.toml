@@ -1,8 +1,8 @@
 [framework]
 name = "aspnet-minimal"
-version = "9.0"
+version = "10.0"
 language = "csharp"
-language_version = ".net 9"
+language_version = ".net 10"
 website = "https://dotnet.microsoft.com/apps/aspnet"
 category = "web-server"
 tier = "micro"

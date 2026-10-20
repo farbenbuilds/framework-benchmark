@@ -1,9 +1,12 @@
-FROM ruby:3.3-alpine3.21@sha256:e5eafee50c2e178c9fef8973be6180850518d1d60eed116dced53f4478369f42
+FROM ruby:3.4.11-alpine3.24@sha256:50133d02799e7da49a1e0bd16d865701622fd61d150a8cd3463edf0016504af5
 WORKDIR /app
 ENV RUBY_YJIT_ENABLE=1
-RUN apk add --no-cache build-base
 COPY Gemfile ./
-RUN bundle install
+RUN apk add --no-cache build-base && \
+    bundle install && \
+    apk del build-base && \
+    rm -rf /usr/local/bundle/cache
 COPY server.rb ./
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["ruby", "server.rb"]

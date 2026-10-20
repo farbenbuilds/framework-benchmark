@@ -1,9 +1,14 @@
-FROM php:8.3-cli-alpine3.21@sha256:f0d5ab7d92c640584a6d885beed40b50764a2d4ded02ec26be144cc238db61db
+FROM php:8.5.11-cli-alpine3.24@sha256:93684051146ec037620855feb77f278090bde45ddc030801cd3f2a7685bc4deb
 WORKDIR /app
-RUN apk add --no-cache git unzip
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 COPY composer.json ./
-RUN composer install --no-dev --optimize-autoloader
+RUN apk add --no-cache curl git unzip && \
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
+    composer install --no-dev --optimize-autoloader && \
+    rm -f /usr/local/bin/composer && \
+    apk del curl git unzip && \
+    rm -rf /root/.composer /root/.cache/composer
 COPY server.php ./
+RUN chown -R 10001:10001 /app
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["php", "server.php", "start"]

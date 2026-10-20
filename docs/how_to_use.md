@@ -64,13 +64,15 @@ In another shell, wait for `/healthz` and make a single request to `/plaintext`.
 
 ### Small OpenStack instances
 
-For a 2-vCPU, 8-GB VM, enable the bounded profile. It uses eight load workers and ten-second measurements instead of the normal host-derived concurrency and 30-second window, and starts each target with one CPU, 2 GB memory, and a 128-process container limit. Start with one libc and one framework smoke run; do not run the full matrix until the instance remains stable.
+For a 2-vCPU, 8-GB VM, use the bounded wrapper. It validates the instance, pins the target and load generator to separate CPUs, and starts each target with one CPU, 2 GB memory, and a 128-process limit. Start with one libc and one framework smoke run; do not run the full matrix until the instance remains stable.
 
 ```sh
-BENCHMARK_SMALL_HOST=1 BENCHMARK_LIBC=glibc scripts/run_benchmarks.sh
+scripts/run_small_host.sh --check-only
+scripts/run_small_host.sh cpeak
+BENCHMARK_LIBC=musl scripts/run_small_host.sh cpeak
 ```
 
-The profile reduces harness pressure, but framework image builds can still need significant memory. Keep swap enabled during builds, stop unrelated services, and run frameworks sequentially. Use a larger dedicated host for comparative full-matrix publication.
+The wrapper sets `BENCHMARK_SMALL_HOST=1`, `BENCHMARK_CONCURRENCY=8`, `BENCHMARK_DURATION_SECS=10`, `BENCHMARK_TARGET_WORKERS=1`, and `BENCHMARK_DATABASE_MANAGED=0` unless the caller overrides them. The small profile uses a 5-second warmup and 3-second cooldown. Framework image builds can still need significant memory; keep swap enabled, stop unrelated services, and run frameworks sequentially. See [small_host.md](small_host.md) for the per-language build notes, database workflow, and troubleshooting, and [small_host_frameworks.md](small_host_frameworks.md) for the per-framework smoke matrix. Use a larger dedicated host for comparative full-matrix publication.
 
 Each plaintext-capable adapter also runs bounded HTTP-Arena supplemental profiles: `http1_pipelining_16`, `connection_churn`, and `paced_plaintext`. The paced profile targets 100 requests per second per configured worker; it is a latency-under-load profile, not a peak-throughput ranking.
 
@@ -99,7 +101,9 @@ DATABASE_URL=postgres://benchmarkdbuser:benchmarkdbpass@127.0.0.1:5432/hello_wor
 
 Set `BENCHMARK_FRAMEWORK_FILTER` to an exact manifest name to run one adapter, for example `BENCHMARK_FRAMEWORK_FILTER=actix-web scripts/run_benchmarks_all.sh`.
 
-Set `CONTAINER_RUNTIME`, `BENCHMARK_WORKERS`, `BENCHMARK_LIBC`, `DATABASE_URL`, and `BENCHMARK_DATABASE_MANAGED` before invoking the script when the defaults do not fit the host. `BENCHMARK_IMAGE_PULL=1` and `BENCHMARK_NO_CACHE=1` make image refresh behavior explicit. Run the Autobahn conformance suite only against a running WebSocket target:
+Set `CONTAINER_RUNTIME`, `BENCHMARK_LIBC`, `BENCHMARK_CONCURRENCY`, `BENCHMARK_DURATION_SECS`, `BENCHMARK_TARGET_WORKERS`, `BENCHMARK_TARGET_HOST`, `BENCHMARK_MANAGE_CONTAINER`, `DATABASE_URL`, and `BENCHMARK_DATABASE_MANAGED` before invoking the script when the defaults do not fit the host. `BENCHMARK_IMAGE_PULL=1` and `BENCHMARK_NO_CACHE=1` make image refresh behavior explicit.
+
+For a two-instance run, point `BENCHMARK_TARGET_HOST` at the server instance and set `BENCHMARK_MANAGE_CONTAINER=0`; the load generator then uses the server's existing deployment. Remote targets do not expose `/proc` or cgroups to the load host, so resource columns are empty unless the collector runs on the server. When the target runs outside a managed Docker container on the same host, set `BENCHMARK_TARGET_PID` and `BENCHMARK_TARGET_CGROUP` so resource sampling attaches to the right process. Set `BENCHMARK_CONTAINER_LOGS=1` to retain Docker logs; the default `none` log driver avoids disk growth during load. Managed containers drop all Linux capabilities, enable `no-new-privileges`, and use an init process; set `BENCHMARK_DISABLE_HARDENING=1` only for a framework that provably needs a capability. Run the Autobahn conformance suite only against a running WebSocket target:
 
 ```sh
 AUTOBAHN_TARGET_URL=ws://127.0.0.1:8080/ws scripts/run_autobahn_suite.sh

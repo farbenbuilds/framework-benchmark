@@ -16,7 +16,7 @@ impl HarvestAggregator {
             self.peak_rss_bytes = rss_bytes;
         }
         self.rss_sum_bytes = self.rss_sum_bytes.saturating_add(rss_bytes);
-        self.sample_count += 1;
+        self.sample_count = self.sample_count.saturating_add(1);
     }
 
     pub fn finalize(self) -> ResourceUsage {

@@ -1,8 +1,8 @@
 [framework]
 name = "iodine"
-version = "0.7.35"
+version = "0.8.1"
 language = "ruby"
-language_version = "3.3"
+language_version = "3.4"
 website = "https://github.com/boazsegev/iodine"
 category = "web-server"
 tier = "micro"

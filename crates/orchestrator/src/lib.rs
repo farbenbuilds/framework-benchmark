@@ -1,11 +1,17 @@
 mod build_options;
+mod container_args;
+mod container_guard;
+mod container_paths;
 pub mod discovery;
 pub mod error;
+pub mod host_profile;
 pub mod lifecycle;
 pub mod machine;
 pub mod poller;
 mod provenance;
 pub mod runner;
+mod session_results;
+mod suite_timing;
 mod workload;
 pub mod ws_bench;
 

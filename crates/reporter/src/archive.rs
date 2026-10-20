@@ -1,4 +1,5 @@
 use crate::error::ReporterError;
+use crate::safety::safe_component;
 use crate::storage::write_new_file;
 use common::result::RunResult;
 use std::path::{Path, PathBuf};
@@ -11,32 +12,22 @@ pub fn timestamped_result_path(
 }
 
 pub fn timestamped_result_relative_path(result: &RunResult) -> Result<PathBuf, ReporterError> {
-    if !valid_run_id(&result.run_id) {
-        return Err(ReporterError::Formatting(
+    let run_id = safe_component(&result.run_id).map_err(|_| {
+        ReporterError::Formatting(
             "run id must contain only ASCII letters, digits, hyphens, and underscores".into(),
-        ));
-    }
+        )
+    })?;
 
     let (year, month) = year_month(result.timestamp_epoch_secs);
     Ok(PathBuf::from("data")
         .join(format!("{year:04}"))
         .join(format!("{month:02}"))
-        .join(format!(
-            "{}-{}.json",
-            result.timestamp_epoch_secs, result.run_id
-        )))
+        .join(format!("{}-{run_id}.json", result.timestamp_epoch_secs)))
 }
 
 pub fn write_result_json(output_path: &Path, result: &RunResult) -> Result<(), ReporterError> {
     let json = common::result::serialize_result_pretty(result)?;
     write_new_file(output_path, json.as_bytes())
-}
-
-fn valid_run_id(run_id: &str) -> bool {
-    !run_id.is_empty()
-        && run_id
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
 }
 
 fn year_month(timestamp_epoch_secs: u64) -> (u64, u64) {

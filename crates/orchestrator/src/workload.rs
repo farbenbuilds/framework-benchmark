@@ -1,6 +1,6 @@
 use crate::lifecycle::{SuiteExecutionConfig, SuiteTiming};
 use collector::BackgroundSampler;
-use common::result::{TestMetrics, TrafficSettings};
+use common::result::{ResourceUsage, TestMetrics, TrafficSettings};
 use load_gen::engine::execute_benchmark;
 use load_gen::{BenchmarkPlan, ConnectionMode};
 use std::time::Duration;
@@ -71,15 +71,23 @@ pub(crate) async fn execute_single_workload(
     config: SuiteExecutionConfig<'_>,
     workload: Workload<'_>,
 ) -> Result<TestMetrics, crate::error::OrchestratorError> {
-    execute_benchmark(plan(config, workload, config.timing, true)).await?;
-    let sampler = BackgroundSampler::spawn_target(
-        config.target_pid,
-        config.cgroup_dir,
-        Duration::from_millis(50),
-    );
+    if config.timing.warmup_secs > 0 {
+        execute_benchmark(plan(config, workload, config.timing, true)).await?;
+    }
+    let sampler = (config.target_pid.is_some() || config.cgroup_dir.is_some()).then(|| {
+        BackgroundSampler::spawn_target(
+            config.target_pid,
+            config.cgroup_dir,
+            Duration::from_millis(50),
+        )
+    });
     let result = execute_benchmark(plan(config, workload, config.timing, false)).await?;
-    let resources = sampler.stop().await;
+    let resources = match sampler {
+        Some(sampler) => sampler.stop().await,
+        None => ResourceUsage::default(),
+    };
     tokio::time::sleep(Duration::from_secs(config.timing.cooldown_secs)).await;
+    validate_status_codes(workload.category, &result.stats)?;
     Ok(TestMetrics {
         category: workload.category.into(),
         concurrency: config.concurrency,
@@ -92,6 +100,22 @@ pub(crate) async fn execute_single_workload(
         status_codes: result.stats.to_status_code_counts(),
         traffic: workload.traffic_settings(),
     })
+}
+
+fn validate_status_codes(
+    category: &str,
+    stats: &load_gen::WorkerStats,
+) -> Result<(), crate::error::OrchestratorError> {
+    let rejected = stats
+        .status_4xx
+        .saturating_add(stats.status_5xx)
+        .saturating_add(stats.errors);
+    if rejected == 0 {
+        return Ok(());
+    }
+    Err(crate::error::OrchestratorError::Process(format!(
+        "workload {category} recorded {rejected} rejected or failed responses"
+    )))
 }
 
 fn plan(

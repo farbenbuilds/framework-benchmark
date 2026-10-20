@@ -34,6 +34,7 @@ fn read_rapl_directory(
 ) -> Result<(), CollectorError> {
     if path.join("energy_uj").is_file() {
         zones.push(read_rapl_zone(path)?);
+        return Ok(());
     }
     for entry in fs::read_dir(path)? {
         let path = entry?.path();
@@ -62,7 +63,7 @@ pub fn energy_delta_joules(before: &[RaplZoneSnapshot], after: &[RaplZoneSnapsho
                     energy_delta_uj(start.energy_uj, end.energy_uj, start.max_energy_range_uj)
                 })
         })
-        .sum::<u64>() as f64
+        .fold(0_u64, u64::saturating_add) as f64
         / 1_000_000.0
 }
 
@@ -87,4 +88,32 @@ fn read_u64(path: &Path, name: &str) -> Result<u64, CollectorError> {
         .trim()
         .parse()
         .map_err(|error| CollectorError::Parse(format!("invalid RAPL {name}: {error}")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::read_rapl_snapshot;
+    use std::fs;
+    use std::path::Path;
+
+    fn write_zone(path: &Path, label: &str, energy: u64) {
+        fs::create_dir_all(path).expect("create RAPL fixture");
+        fs::write(path.join("name"), label).expect("write RAPL name");
+        fs::write(path.join("energy_uj"), energy.to_string()).expect("write RAPL energy");
+        fs::write(path.join("max_energy_range_uj"), "1000").expect("write RAPL range");
+    }
+
+    #[test]
+    fn nested_zones_do_not_double_count_package_energy() {
+        let root = std::env::temp_dir().join(format!("rapl-{}", std::process::id()));
+        let package = root.join("intel-rapl:0");
+        write_zone(&package, "package-0", 100);
+        write_zone(&package.join("intel-rapl:0:0"), "core", 50);
+
+        let zones = read_rapl_snapshot(&root).expect("read RAPL fixture");
+        fs::remove_dir_all(&root).expect("remove RAPL fixture");
+
+        assert_eq!(zones.len(), 1);
+        assert_eq!(zones[0].energy_uj, 100);
+    }
 }

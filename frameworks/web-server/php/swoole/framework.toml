@@ -1,8 +1,8 @@
 [framework]
 name = "swoole"
-version = "5.1.4"
+version = "6.2.3"
 language = "php"
-language_version = "8.3"
+language_version = "8.5"
 website = "https://www.swoole.com/"
 category = "web-server"
 tier = "micro"

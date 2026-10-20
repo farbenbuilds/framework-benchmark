@@ -29,6 +29,10 @@ pub fn start_container(
         LibcVariant::Musl => docker.dockerfile_musl.as_deref(),
     }
     .ok_or_else(|| OrchestratorError::Process("framework lacks requested libc image".into()))?;
+    let dockerfile = crate::container_paths::secure_dockerfile(framework_dir, dockerfile)?;
+    let dockerfile = dockerfile
+        .to_str()
+        .ok_or_else(|| OrchestratorError::Process("dockerfile path must be valid UTF-8".into()))?;
     let cpuset_cpus =
         container_config::optional_config("BENCHMARK_TARGET_CPUS", container_config::valid_cpuset)?;
     let cgroup_parent = container_config::optional_config(
@@ -45,37 +49,25 @@ pub fn start_container(
         .duration_since(UNIX_EPOCH)
         .map_err(|error| OrchestratorError::Process(error.to_string()))?
         .as_millis();
-    let base = sanitize_name(&manifest.framework.name);
+    let base = crate::container_paths::sanitize_name(&manifest.framework.name);
     let image = format!("framework-benchmark/{base}:{suffix}");
     let name = format!("benchmark-{base}-{suffix}-{stamp}");
-    let build_args = crate::build_options::docker_build_args(dockerfile, &image)?;
-    run_docker(framework_dir, &build_args)?;
+    let build_args =
+        crate::build_options::docker_build_args(dockerfile, &image, &docker.build_args)?;
+    run_docker_stream(framework_dir, &build_args)?;
     let image_id = image_id(framework_dir, &image)?;
-    let mut args = vec![
-        "run".into(),
-        "--detach".into(),
-        "--name".into(),
-        name.clone(),
-        "--label".into(),
-        "framework-benchmark.managed=true".into(),
-        "--network".into(),
-        "host".into(),
-        "--stop-signal".into(),
-        shutdown_signal.into(),
-        "--env".into(),
-        format!("BENCHMARK_WORKERS={}", benchmark_workers()),
-    ];
-    args.extend(container_config::isolation_args(
-        cpuset_cpus.as_deref(),
-        cgroup_parent.as_deref(),
-    ));
-    if small_host() {
-        args.extend(["--cpus", "1", "--memory", "2g", "--pids-limit", "128"].map(String::from));
-    }
-    if let Some(database_url) = database_url {
-        args.extend(["--env".into(), format!("DATABASE_URL={database_url}")]);
-    }
-    args.push(image);
+    let workers = crate::host_profile::target_workers(cpuset_cpus.as_deref());
+    let spec = crate::container_args::RunSpec {
+        name: &name,
+        shutdown_signal,
+        workers,
+        cpuset_cpus: cpuset_cpus.as_deref(),
+        cgroup_parent: cgroup_parent.as_deref(),
+        database_url,
+        environment: &manifest.runtime.environment,
+        image: &image,
+    };
+    let args = crate::container_args::run_args(&spec);
     let id = run_docker(framework_dir, &args)?.trim().to_owned();
     let pid = match container_pid(framework_dir, &id) {
         Ok(pid) => pid,
@@ -114,15 +106,11 @@ fn image_id(framework_dir: &Path, image: &str) -> Result<String, OrchestratorErr
     Ok(id.into())
 }
 pub fn stop_container(framework_dir: &Path, name: &str) -> Result<(), OrchestratorError> {
-    let stopped = run_docker(framework_dir, &container_config::stop_args(name));
-    let removed = run_docker(framework_dir, &["rm", name]);
-    if removed.is_ok() {
+    let _ = run_docker(framework_dir, &container_config::stop_args(name));
+    if run_docker(framework_dir, &["rm", name]).is_ok() {
         return Ok(());
     }
-    if run_docker(framework_dir, &["rm", "--force", name]).is_ok() {
-        return Ok(());
-    }
-    Err(stopped.and(removed).unwrap_err())
+    run_docker(framework_dir, &["rm", "--force", name]).map(|_| ())
 }
 fn container_pid(framework_dir: &Path, id: &str) -> Result<u32, OrchestratorError> {
     run_docker(framework_dir, &["inspect", "--format={{.State.Pid}}", id])?
@@ -143,21 +131,14 @@ fn cgroup_dir_for_pid(pid: u32) -> Result<PathBuf, OrchestratorError> {
 }
 fn cgroup_dir_from_content(content: &str) -> Option<PathBuf> {
     let cgroup = content.lines().find_map(|line| line.strip_prefix("0::"))?;
-    Some(Path::new("/sys/fs/cgroup").join(cgroup.trim_start_matches('/')))
-}
-fn benchmark_workers() -> usize {
-    env::var("BENCHMARK_WORKERS")
-        .ok()
-        .and_then(|value| value.parse().ok())
-        .filter(|value: &usize| *value > 0)
-        .unwrap_or_else(|| std::thread::available_parallelism().map_or(1, usize::from))
-}
-fn small_host() -> bool {
-    env::var("BENCHMARK_SMALL_HOST").is_ok_and(|value| value == "1")
+    let relative = cgroup.trim_start_matches('/');
+    if relative.is_empty() {
+        return None;
+    }
+    Some(Path::new("/sys/fs/cgroup").join(relative))
 }
 fn run_docker<S: AsRef<str>>(cwd: &Path, args: &[S]) -> Result<String, OrchestratorError> {
-    let runtime = env::var("CONTAINER_RUNTIME").unwrap_or_else(|_| "docker".into());
-    let output = Command::new(runtime)
+    let output = Command::new(container_runtime())
         .args(args.iter().map(AsRef::as_ref))
         .current_dir(cwd)
         .output()?;
@@ -168,16 +149,22 @@ fn run_docker<S: AsRef<str>>(cwd: &Path, args: &[S]) -> Result<String, Orchestra
         String::from_utf8_lossy(&output.stderr).trim().to_string(),
     ))
 }
-fn sanitize_name(name: &str) -> String {
-    name.chars()
-        .map(|char| {
-            if char.is_ascii_alphanumeric() {
-                char
-            } else {
-                '-'
-            }
-        })
-        .collect()
+
+fn run_docker_stream<S: AsRef<str>>(cwd: &Path, args: &[S]) -> Result<(), OrchestratorError> {
+    let status = Command::new(container_runtime())
+        .args(args.iter().map(AsRef::as_ref))
+        .current_dir(cwd)
+        .status()?;
+    if status.success() {
+        return Ok(());
+    }
+    Err(OrchestratorError::Process(format!(
+        "container command failed with {status}"
+    )))
+}
+
+fn container_runtime() -> String {
+    env::var("CONTAINER_RUNTIME").unwrap_or_else(|_| "docker".into())
 }
 #[cfg(test)]
 mod tests {
@@ -192,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn names_replace_container_unsafe_characters() {
-        assert_eq!(sanitize_name("rust/axum"), "rust-axum");
+    fn cgroup_root_is_not_accepted_as_a_target_scope() {
+        assert_eq!(cgroup_dir_from_content("0::/\n"), None);
     }
 }

@@ -147,7 +147,9 @@ fn validate_control_frame(header: &FrameHeader) -> Result<(), LoadGenError> {
 }
 
 pub fn apply_mask(payload: &mut [u8], mask: [u8; 4]) {
-    for (i, byte) in payload.iter_mut().enumerate() {
-        *byte ^= mask[i % 4];
+    for chunk in payload.chunks_mut(4) {
+        for (offset, byte) in chunk.iter_mut().enumerate() {
+            *byte ^= mask[offset];
+        }
     }
 }

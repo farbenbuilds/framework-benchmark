@@ -17,7 +17,13 @@ pub fn framework_input_sha256(root: &Path) -> Result<String, OrchestratorError> 
         digest.update([0]);
         digest.update(fs::read(path)?);
     }
-    Ok(format!("{:x}", digest.finalize()))
+    let digest = digest.finalize();
+    let mut hex = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        use std::fmt::Write;
+        let _ = write!(hex, "{byte:02x}");
+    }
+    Ok(hex)
 }
 
 fn collect_files(

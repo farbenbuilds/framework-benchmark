@@ -10,7 +10,7 @@ impl FrameBuilder {
         mask: [u8; 4],
         fin: bool,
     ) -> Vec<u8> {
-        let mut frame = Vec::with_capacity(payload.len() + 14);
+        let mut frame = Vec::with_capacity(payload.len().saturating_add(14));
 
         let mut b0 = opcode as u8;
         if fin {

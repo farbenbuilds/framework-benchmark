@@ -1,8 +1,8 @@
 [framework]
 name = "cpeak"
-version = "0.1.0"
+version = "0.4.0"
 language = "rust"
-language_version = "1.85"
+language_version = "1.90"
 website = "https://github.com/Cododev-Technology/cpeak"
 category = "web-server"
 tier = "micro"

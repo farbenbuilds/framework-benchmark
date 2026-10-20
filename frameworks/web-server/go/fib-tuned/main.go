@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 var (
@@ -10,24 +10,24 @@ var (
 )
 
 func main() {
-	app := fiber.New(fiber.Config{
-		Prefork:               false,
-		DisableStartupMessage: true,
-	})
+	app := fiber.New()
 
-	app.Get("/healthz", func(c *fiber.Ctx) error {
+	app.Get("/healthz", func(c fiber.Ctx) error {
 		return c.Send(nil)
 	})
 
-	app.Get("/plaintext", func(c *fiber.Ctx) error {
+	app.Get("/plaintext", func(c fiber.Ctx) error {
 		c.Set("Content-Type", "text/plain; charset=utf-8")
 		return c.Send(plaintextBody)
 	})
 
-	app.Get("/json", func(c *fiber.Ctx) error {
+	app.Get("/json", func(c fiber.Ctx) error {
 		c.Set("Content-Type", "application/json")
 		return c.Send(jsonBody)
 	})
 
-	_ = app.Listen(":8080")
+	_ = app.Listen(":8080", fiber.ListenConfig{
+		EnablePrefork:         false,
+		DisableStartupMessage: true,
+	})
 }

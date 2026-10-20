@@ -1,8 +1,8 @@
 [framework]
 name = "bun"
-version = "1.3.3"
+version = "1.4.3"
 language = "javascript"
-language_version = "bun-1.3"
+language_version = "bun-1.4"
 website = "https://bun.sh/"
 category = "web-server"
 tier = "micro"

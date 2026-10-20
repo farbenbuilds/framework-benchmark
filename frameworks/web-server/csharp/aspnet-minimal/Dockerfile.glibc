@@ -1,13 +1,14 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0@sha256:4e5864c8e21b6005d3445b056f92541c2d145499b760e89d5e012ee4f0459331 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa AS build
 WORKDIR /src
 COPY aspnet-minimal.csproj ./
 RUN dotnet restore
 COPY Program.cs ./
 RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim@sha256:0712631f86d30f5290544fd97d37bd281e44aed8ebe1ba436f2ddb1dd0d4983f AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
+USER app
 ENTRYPOINT ["dotnet", "aspnet-minimal.dll"]

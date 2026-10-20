@@ -1,8 +1,8 @@
 [framework]
 name = "agoo"
-version = "2.15.5"
+version = "2.15.15"
 language = "ruby"
-language_version = "3.3"
+language_version = "3.4"
 website = "https://github.com/ohler55/agoo"
 category = "web-server"
 tier = "micro"

@@ -27,6 +27,8 @@ pub fn parse_ebpf_metrics(content: &str) -> EbpfMetrics {
 }
 
 pub fn page_cache_hit_ratio(metrics: EbpfMetrics) -> Option<f64> {
-    let total = metrics.page_cache_hits + metrics.page_cache_misses;
+    let total = metrics
+        .page_cache_hits
+        .saturating_add(metrics.page_cache_misses);
     (total > 0).then(|| metrics.page_cache_hits as f64 / total as f64)
 }

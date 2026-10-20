@@ -1,8 +1,8 @@
 [framework]
 name = "blacksheep"
-version = "2.0.7"
+version = "2.6.4"
 language = "python"
-language_version = "3.12"
+language_version = "3.13"
 website = "https://www.neoteroi.dev/blacksheep/"
 category = "web-server"
 tier = "micro"

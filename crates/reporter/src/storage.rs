@@ -75,7 +75,7 @@ fn create_temporary_file(path: &Path, parent: &Path) -> Result<(File, PathBuf), 
             .open(&temporary_path)
         {
             Ok(file) => return Ok((file, temporary_path)),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
             Err(error) => return Err(error.into()),
         }
     }

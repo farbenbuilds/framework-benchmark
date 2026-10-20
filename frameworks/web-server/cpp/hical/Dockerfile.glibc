@@ -1,19 +1,20 @@
-FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55 AS build
+FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac AS build
 WORKDIR /src
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     cmake g++ git libboost-json1.83-dev libssl-dev make zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
 RUN git init /opt/hical && git -C /opt/hical remote add origin \
     https://github.com/Hical61/Hical.git && git -C /opt/hical fetch --depth 1 \
-    origin e61cb09a0c699fc1ffcdb9824a8edcad88d22fb0 && \
+    origin 71832c9e276a7de8a706474a5dccf34c33992c94 && \
     git -C /opt/hical checkout --detach FETCH_HEAD
 COPY CMakeLists.txt main.cpp ./
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel
 
-FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
 WORKDIR /app
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libboost-json1.83.0 libssl3 zlib1g && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/build/server /app/server
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["/app/server"]

@@ -1,9 +1,15 @@
-FROM php:8.3-cli-bookworm@sha256:c24b55afdf860c874b9ec6267ced132ff52de97d308ab08e6cf41e8596e509f7
+FROM php:8.5.11-cli-trixie@sha256:01a109229f4465bc9ef042d9198f09a4d9da7775a825dbd8572dcdbd8756c4d3
 WORKDIR /app
-RUN apt-get update -qq && apt-get install -y --no-install-recommends git unzip && rm -rf /var/lib/apt/lists/*
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 COPY composer.json ./
-RUN composer install --no-dev --optimize-autoloader
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends curl git unzip && \
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
+    composer install --no-dev --optimize-autoloader && \
+    rm -f /usr/local/bin/composer && \
+    apt-get purge -y --auto-remove curl git unzip && \
+    rm -rf /var/lib/apt/lists/* /root/.composer /root/.cache/composer
 COPY server.php ./
+RUN chown -R 10001:10001 /app
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["php", "server.php", "start"]

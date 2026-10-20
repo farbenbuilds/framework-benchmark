@@ -90,66 +90,6 @@ pub struct FrameworkManifest {
 
 pub fn parse_manifest(toml_str: &str) -> Result<FrameworkManifest, CommonError> {
     let manifest: FrameworkManifest = toml::from_str(toml_str)?;
-    validate_manifest(&manifest)?;
+    crate::validation::validate_manifest(&manifest)?;
     Ok(manifest)
-}
-
-pub fn validate_manifest(m: &FrameworkManifest) -> Result<(), CommonError> {
-    if m.framework.name.trim().is_empty() {
-        return Err(CommonError::Validation(
-            "framework name cannot be empty".into(),
-        ));
-    }
-    if m.framework.language.trim().is_empty() {
-        return Err(CommonError::Validation(
-            "framework language cannot be empty".into(),
-        ));
-    }
-    if m.runtime.port == 0 {
-        return Err(CommonError::Validation("runtime port cannot be 0".into()));
-    }
-    if !m.runtime.healthcheck_path.starts_with('/') {
-        return Err(CommonError::Validation(
-            "healthcheck_path must start with '/'".into(),
-        ));
-    }
-    if m.runtime
-        .websocket_path
-        .as_deref()
-        .is_some_and(|path| !path.starts_with('/'))
-    {
-        return Err(CommonError::Validation(
-            "websocket_path must start with '/'".into(),
-        ));
-    }
-    if m.build.engine != "docker" && m.build.engine != "nix" {
-        return Err(CommonError::Validation(
-            "build engine must be 'docker' or 'nix'".into(),
-        ));
-    }
-    if m.build.engine == "docker" {
-        let Some(docker) = &m.build.docker else {
-            return Err(CommonError::Validation(
-                "docker engine requires docker config".into(),
-            ));
-        };
-        if docker.dockerfile_glibc.is_none() || docker.dockerfile_musl.is_none() {
-            return Err(CommonError::Validation(
-                "docker engine requires glibc and musl Dockerfiles".into(),
-            ));
-        }
-    }
-    if m.build.engine == "nix" {
-        let Some(nix) = &m.build.nix else {
-            return Err(CommonError::Validation(
-                "nix engine requires nix config".into(),
-            ));
-        };
-        if nix.flake_attr_glibc.is_none() || nix.flake_attr_musl.is_none() {
-            return Err(CommonError::Validation(
-                "nix engine requires glibc and musl flake attributes".into(),
-            ));
-        }
-    }
-    Ok(())
 }

@@ -1,8 +1,8 @@
 [framework]
 name = "elysia"
-version = "1.3.3"
+version = "1.4.30"
 language = "javascript"
-language_version = "bun-1.3"
+language_version = "bun-1.4"
 website = "https://elysiajs.com/"
 category = "web-server"
 tier = "micro"

@@ -2,6 +2,8 @@ use crate::LoadGenError;
 
 pub const MAX_CONCURRENCY: usize = 256;
 pub const MAX_PIPELINE_DEPTH: usize = 64;
+pub const MAX_DURATION_SECS: u64 = 3_600;
+pub const MAX_TARGET_RPS: u64 = 10_000_000;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectionMode {
@@ -40,17 +42,24 @@ impl BenchmarkPlan {
         if self.target_addr.trim().is_empty() {
             return Err(LoadGenError::InvalidPlan("target address is empty".into()));
         }
-        if !self.path.starts_with('/') {
-            return Err(LoadGenError::InvalidPlan("path must start with '/'".into()));
+        if !valid_target_addr(&self.target_addr) {
+            return Err(LoadGenError::InvalidPlan(
+                "target address contains invalid characters".into(),
+            ));
+        }
+        if !valid_request_path(&self.path) {
+            return Err(LoadGenError::InvalidPlan(
+                "path must start with '/' and contain no whitespace".into(),
+            ));
         }
         if !(1..=MAX_CONCURRENCY).contains(&self.concurrency) {
             return Err(LoadGenError::InvalidPlan(
                 "concurrency must be between 1 and 256".into(),
             ));
         }
-        if self.duration_secs == 0 {
+        if !(1..=MAX_DURATION_SECS).contains(&self.duration_secs) {
             return Err(LoadGenError::InvalidPlan(
-                "duration must be positive".into(),
+                "duration must be between 1 and 3600 seconds".into(),
             ));
         }
         if !(1..=MAX_PIPELINE_DEPTH).contains(&self.pipeline_depth) {
@@ -63,18 +72,39 @@ impl BenchmarkPlan {
                 "churn mode requires a pipeline depth of 1".into(),
             ));
         }
-        if self.target_rps == Some(0) {
+        if self
+            .target_rps
+            .is_some_and(|rps| !(1..=MAX_TARGET_RPS).contains(&rps))
+        {
             return Err(LoadGenError::InvalidPlan(
-                "target RPS must be positive".into(),
+                "target RPS must be between 1 and 10000000".into(),
             ));
         }
         Ok(())
     }
 }
 
+fn valid_target_addr(value: &str) -> bool {
+    value.len() <= 255
+        && !value
+            .bytes()
+            .any(|byte| byte.is_ascii_control() || byte.is_ascii_whitespace())
+}
+
+fn valid_request_path(value: &str) -> bool {
+    value.starts_with('/')
+        && value.len() <= 2048
+        && !value
+            .bytes()
+            .any(|byte| byte.is_ascii_control() || byte.is_ascii_whitespace())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{BenchmarkPlan, ConnectionMode, MAX_CONCURRENCY, MAX_PIPELINE_DEPTH};
+    use super::{
+        BenchmarkPlan, ConnectionMode, MAX_CONCURRENCY, MAX_DURATION_SECS, MAX_PIPELINE_DEPTH,
+        MAX_TARGET_RPS,
+    };
 
     #[test]
     fn validate_rejects_invalid_measurement_bounds() {
@@ -110,6 +140,20 @@ mod tests {
         };
         assert!(concurrency.validate().is_err());
         assert!(pipeline.validate().is_err());
+    }
+
+    #[test]
+    fn validate_rejects_unbounded_duration_and_rate() {
+        let long = BenchmarkPlan {
+            duration_secs: MAX_DURATION_SECS + 1,
+            ..BenchmarkPlan::default()
+        };
+        let fast = BenchmarkPlan {
+            target_rps: Some(MAX_TARGET_RPS + 1),
+            ..BenchmarkPlan::default()
+        };
+        assert!(long.validate().is_err());
+        assert!(fast.validate().is_err());
     }
 
     #[test]

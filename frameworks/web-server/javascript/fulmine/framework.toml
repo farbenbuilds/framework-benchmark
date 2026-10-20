@@ -1,8 +1,8 @@
 [framework]
 name = "fulmine"
-version = "5.21.4"
+version = "5.25.5"
 language = "javascript"
-language_version = "node-22"
+language_version = "node-24"
 website = "https://github.com/nigrosimone/fulmine.js"
 category = "web-server"
 tier = "micro"

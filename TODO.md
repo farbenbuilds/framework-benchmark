@@ -46,6 +46,8 @@ The Docker-based dual-libc baseline is implemented, but a result is publishable 
 - Host-managed cgroups and CPU sets for complete collector attribution. [Completed]
 - Full-matrix execution on a labelled self-hosted runner. [Requires designated host]
 - Immutable image and framework input pinning before historical comparison. [Completed]
+- Bounded 2 vCPU / 8 GB OpenStack profile and per-language smoke workflow. [Completed]
+- Optional graphify code knowledge graph for agent-assisted reviews. [Completed]
 
 See [docs/how_to_use.md](docs/how_to_use.md) for the supported host workflow.
 

@@ -1,8 +1,8 @@
 [framework]
 name = "granian"
-version = "1.7.5"
+version = "2.8.5"
 language = "python"
-language_version = "3.12"
+language_version = "3.13"
 website = "https://github.com/emmett-framework/granian"
 category = "web-server"
 tier = "micro"

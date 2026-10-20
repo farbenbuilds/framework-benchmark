@@ -1,18 +1,19 @@
-FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507 AS build
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS build
 WORKDIR /src
 RUN apk add --no-cache asio-dev cmake g++ git make ninja openssl-dev zlib-dev
 RUN git init /src/agensio && git -C /src/agensio remote add origin \
     https://github.com/YiannisBourkelis/agensio.git && git -C /src/agensio fetch \
-    --depth 1 origin eadce75a37564fc379f33aab110408cdfa0b73a4 && \
+    --depth 1 origin fadba72678e94cbd2470825a98c7e627c6c868db && \
     git -C /src/agensio checkout --detach FETCH_HEAD
 RUN cmake -S /src/agensio -B /src/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DAGENSIO_NATIVE=ON -DAGENSIO_TESTS=OFF && cmake --build /src/build --target agensio
 
-FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 WORKDIR /app
 RUN apk add --no-cache libstdc++ openssl zlib
 COPY agensio.toml /etc/agensio/agensio.toml
 COPY www /app/www
 COPY --from=build /src/build/agensio /usr/local/bin/agensio
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["/usr/local/bin/agensio", "-c", "/etc/agensio/agensio.toml"]

@@ -17,6 +17,10 @@ if ! command -v "$RUNTIME" >/dev/null 2>&1; then
     echo "Container runtime not found: $RUNTIME" >&2
     exit 1
 fi
+if ! printf '%s' "$TARGET_URL" | grep -Eq '^wss?://[^"\\[:space:]]+$'; then
+    echo "AUTOBAHN_TARGET_URL must be a ws:// or wss:// URL without quotes or whitespace." >&2
+    exit 2
+fi
 
 mkdir -p "$RESULTS_DIR"
 printf '%s\n' '{' > "$CONFIG"

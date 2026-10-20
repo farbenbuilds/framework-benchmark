@@ -1,8 +1,9 @@
 use crate::error::ReporterError;
 use crate::index::HistoricalIndex;
+use crate::safety::safe_relative_path;
 use common::result::{RunResult, deserialize_result};
 use std::fs;
-use std::path::{Component, Path};
+use std::path::Path;
 
 pub fn load_historical_results(results_dir: &Path) -> Result<Vec<RunResult>, ReporterError> {
     let index_path = results_dir.join("index.json");
@@ -19,12 +20,7 @@ pub fn load_historical_results(results_dir: &Path) -> Result<Vec<RunResult>, Rep
 }
 
 fn load_result(results_dir: &Path, relative_path: &str) -> Result<RunResult, ReporterError> {
-    let path = Path::new(relative_path);
-    if path.is_absolute() || path.components().any(|part| part == Component::ParentDir) {
-        return Err(ReporterError::Formatting(
-            "index contains an unsafe result path".into(),
-        ));
-    }
+    let path = safe_relative_path(Path::new(relative_path))?;
     let contents = fs::read_to_string(results_dir.join(path))?;
     deserialize_result(&contents).map_err(ReporterError::from)
 }
@@ -36,6 +32,25 @@ mod tests {
 
     #[test]
     fn historical_paths_cannot_escape_results_directory() {
-        assert!(load_result(Path::new("/tmp"), "../outside.json").is_err());
+        for path in [
+            "../outside.json",
+            "/etc/passwd",
+            "data/../../outside.json",
+            "./outside.json",
+            "",
+        ] {
+            assert!(
+                load_result(Path::new("/tmp"), path).is_err(),
+                "accepted {path:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn historical_paths_accept_existing_layout() {
+        let path = "results/data/2026/10/1700000000-test-run.json";
+        let error = load_result(Path::new("/nonexistent-results"), path)
+            .expect_err("missing artifact must fail");
+        assert!(matches!(error, crate::ReporterError::Io(_)));
     }
 }

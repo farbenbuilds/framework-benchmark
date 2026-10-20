@@ -33,11 +33,11 @@ if (-not $failed) {
 }
 
 Write-Host "[3/4] Checking for slop markers..."
-$sourceFiles = git ls-files '*.rs', '*.sh', '*.ps1', '*.toml', '*.yml', '*.yaml' | Where-Object { $_ -notmatch '^scripts/check_conventions\.' }
+$sourceFiles = git ls-files '*.rs', '*.sh', '*.ps1', '*.toml', '*.yml', '*.yaml' | Where-Object { $_ -notmatch '^scripts/check_conventions\.' -and $_ -notmatch '^\.github/ISSUE_TEMPLATE/' }
 foreach ($file in $sourceFiles) {
     if (-not (Test-Path $file)) { continue }
     $content = Get-Content $file -Raw
-    if ($content -match '\b(FIXME|XXX|HACK)\b') {
+    if ($content -match '\b(TODO|FIXME|XXX|HACK)\b') {
         Write-Host "ERROR: Slop markers detected in: $file" -ForegroundColor Red
         $failed = $true
     }
