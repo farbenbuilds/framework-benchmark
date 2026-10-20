@@ -9,7 +9,7 @@ using var app = HttpServer.CreateBuilder()
     .UseRouter(router =>
     {
         router.MapGet("/healthz", _ => new HttpResponse());
-        router.MapGet("/plaintext", _ => Response("Hello, World!", "text/plain; charset=utf-8"));
+        router.MapGet("/plaintext", _ => Response("Hello, World!", "text/plain"));
         router.MapGet("/json", _ => Response("{\"message\":\"Hello, World!\"}", "application/json"));
     })
     .Build();

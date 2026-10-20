@@ -1,14 +1,17 @@
-FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507 AS builder
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS builder
 WORKDIR /usr/src/app
 RUN apk add --no-cache ca-certificates curl git xz
-RUN curl -fsSL https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
-RUN git init /opt/dusty && git -C /opt/dusty remote add origin https://github.com/lalinsky/dusty.git && git -C /opt/dusty fetch --depth 1 origin 494f856d1795cfbf6180f6f8e5a80665d8114174 && git -C /opt/dusty checkout --detach FETCH_HEAD
+RUN curl -fsSL -o /tmp/zig.tar.xz https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz && \
+    tar -xJf /tmp/zig.tar.xz -C /opt && rm /tmp/zig.tar.xz && \
+    ln -s /opt/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
+RUN git init /opt/dusty && git -C /opt/dusty remote add origin https://github.com/lalinsky/dusty.git && git -C /opt/dusty fetch --depth 1 origin 9f74f97b91774c1f6e8c66da03403deb89be05a3 && git -C /opt/dusty checkout --detach FETCH_HEAD
 COPY . .
 RUN ln -s /opt/dusty dusty && zig build -Doptimize=ReleaseFast
 
-FROM alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 WORKDIR /app
-RUN apk add --no-cache ca-certificates curl
+RUN apk add --no-cache ca-certificates
 COPY --from=builder /usr/src/app/zig-out/bin/server /app/server
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["/app/server"]

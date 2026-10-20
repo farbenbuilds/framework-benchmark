@@ -62,6 +62,39 @@ fn test_reject_empty_name() {
 }
 
 #[test]
+fn test_reject_path_traversal_and_injection_values() {
+    let unsafe_category =
+        VALID_TOML.replace("category = \"web-server\"", "category = \"../escape\"");
+    let unsafe_dockerfile = VALID_TOML.replace(
+        "dockerfile_glibc = \"Dockerfile.glibc\"",
+        "dockerfile_glibc = \"../Dockerfile.glibc\"",
+    );
+    let unsafe_healthcheck = VALID_TOML.replace(
+        "healthcheck_path = \"/healthz\"",
+        "healthcheck_path = \"/health z\"",
+    );
+    assert!(parse_manifest(&unsafe_category).is_err());
+    assert!(parse_manifest(&unsafe_dockerfile).is_err());
+    assert!(parse_manifest(&unsafe_healthcheck).is_err());
+}
+
+#[test]
+fn test_accepts_current_registry_metadata_forms() {
+    let manifest = parse_manifest(
+        &VALID_TOML
+            .replace("name = \"axum\"", "name = \"aspnet-minimal\"")
+            .replace("version = \"0.8\"", "version = \"v20.69.0\"")
+            .replace("language = \"rust\"", "language = \"csharp\"")
+            .replace(
+                "language_version = \"1.85\"",
+                "language_version = \".net 9\"",
+            ),
+    )
+    .expect("registry metadata form should validate");
+    assert_eq!(manifest.framework.name, "aspnet-minimal");
+}
+
+#[test]
 fn test_reject_invalid_engine() {
     let invalid_toml = VALID_TOML.replace("engine = \"docker\"", "engine = \"kubernetes\"");
     let err = parse_manifest(&invalid_toml).unwrap_err();

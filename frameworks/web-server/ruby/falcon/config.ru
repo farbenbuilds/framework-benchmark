@@ -1,6 +1,6 @@
 HEALTH = [200, {}, []].freeze
 PLAINTEXT = [200, { 'content-type' => 'text/plain; charset=utf-8' }, ['Hello, World!']].freeze
-JSON = [200, { 'content-type' => 'application/json' }, ['{"message":"Hello, World!"}']].freeze
+JSON_BODY = [200, { 'content-type' => 'application/json' }, ['{"message":"Hello, World!"}']].freeze
 
 run lambda { |env|
   path = env['PATH_INFO']
@@ -9,7 +9,7 @@ run lambda { |env|
   elsif path == '/plaintext'
     PLAINTEXT
   elsif path == '/json'
-    JSON
+    JSON_BODY
   else
     [404, {}, []]
   end

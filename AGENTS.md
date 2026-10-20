@@ -6,7 +6,7 @@ You prioritize deterministic benchmarking, zero-allocation hot paths, data-orien
 
 ## Core Directives
 1. **Target**: Build an industrial-grade, multi-language client and server framework benchmark platform rivaling TechEmpower and HttpArena.
-2. **Language**: Rust (edition 2024 / 1.85+). Adhere to idiomatic, safe Rust with zero unneeded allocations on measurement paths.
+2. **Language**: Rust (edition 2024 / 1.90+). Adhere to idiomatic, safe Rust with zero unneeded allocations on measurement paths.
 3. **Dual-Libc Parity**: Ensure every benchmark suite and runtime evaluates both GNU C Library (`glibc`) and `musl` libc via Docker and Nix flakes.
 4. **File Length Limit**: Strictly enforce a hard limit of at most 200 lines per file across all code, configuration, scripts, and documentation.
 5. **Linux Coding Style**: Adhere to Linux kernel style principles: `snake_case` naming for files, functions, and variables; early returns; minimal nesting (max 3 levels); keyword spacing; and happy path unindented.

@@ -16,7 +16,7 @@ Every benchmark phase and pull request must satisfy the following acceptance cri
 
 ### 2. Performance and Measurement Integrity
 - **Zero Allocations on Hot Paths**: Load generation and telemetry loops must not allocate heap memory during active measurement sampling.
-- **Coordinated Omission**: Latency reporting must utilize HDR histogram with constant-rate scheduling to capture actual queue wait times.
+- **Coordinated Omission**: Paced workloads must use HDR histogram correction with constant-rate scheduling to capture queue wait time. Closed-loop profiles record service latency and must be labeled as closed-loop; do not present them as open-loop client latency.
 - **Dual-Libc Validation**: Frameworks must provide verified build paths for both `glibc` and `musl`.
 - **Reproducibility**: Compare repeated runs only after recording identical revision, image inputs, CPU topology, traffic placement, and workload settings.
 

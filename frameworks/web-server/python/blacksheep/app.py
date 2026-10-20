@@ -5,16 +5,16 @@ PLAINTEXT = Content(b"text/plain", b"Hello, World!")
 JSON = Content(b"application/json", b'{"message":"Hello, World!"}')
 
 
-@app.route("/healthz")
+@app.router.get("/healthz")
 async def healthz() -> Response:
     return Response(200)
 
 
-@app.route("/plaintext")
+@app.router.get("/plaintext")
 async def plaintext() -> Response:
     return Response(200, content=PLAINTEXT)
 
 
-@app.route("/json")
+@app.router.get("/json")
 async def get_json() -> Response:
     return Response(200, content=JSON)

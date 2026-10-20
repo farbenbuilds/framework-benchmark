@@ -7,7 +7,7 @@ var app = Layout.Create()
     .Add("plaintext", Content.From(Resource.FromString("Hello, World!")))
     .Add("json", Content.From(Resource.FromString("{\"message\": \"Hello, World!\"}")));
 
-var host = Host.Create()
+var host = GenHTTP.Engine.Internal.Host.Create()
     .Handler(app)
     .Port(8080);
 

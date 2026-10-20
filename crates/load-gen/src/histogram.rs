@@ -47,12 +47,6 @@ impl LatencyRecorder {
     }
 }
 
-impl Default for LatencyRecorder {
-    fn default() -> Self {
-        Self::new().expect("default histogram creation cannot fail")
-    }
-}
-
 impl std::fmt::Debug for LatencyRecorder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LatencyRecorder")

@@ -1,6 +1,7 @@
 use crate::LoadGenError;
 
 pub(crate) const MAX_RESPONSE_BYTES: usize = 65_536;
+pub(crate) const MAX_RESPONSE_HEADERS: usize = 64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct HttpResponse {
@@ -10,7 +11,7 @@ pub(crate) struct HttpResponse {
 }
 
 pub(crate) fn parse_response(bytes: &[u8]) -> Result<Option<HttpResponse>, LoadGenError> {
-    let mut headers = [httparse::EMPTY_HEADER; 16];
+    let mut headers = [httparse::EMPTY_HEADER; MAX_RESPONSE_HEADERS];
     let (header_len, status) = parse_headers(bytes, &mut headers)?;
     let Some((header_len, status)) = header_len.zip(status) else {
         return Ok(None);

@@ -27,7 +27,10 @@ pub fn start_database(repo_root: &Path) -> Result<Option<DatabaseSession>, Orche
     if was_running {
         return Ok(Some(session));
     }
-    compose(&session, &["up", "--detach", "--wait"])?;
+    if let Err(error) = compose(&session, &["up", "--detach", "--wait"]) {
+        let _ = compose(&session, &["down", "--remove-orphans"]);
+        return Err(error);
+    }
     Ok(Some(DatabaseSession {
         started: true,
         ..session

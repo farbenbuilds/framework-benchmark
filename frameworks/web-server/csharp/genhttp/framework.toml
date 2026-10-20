@@ -1,8 +1,8 @@
 [framework]
 name = "genhttp"
-version = "9.5.0"
+version = "11.1.0"
 language = "csharp"
-language_version = ".net 9"
+language_version = ".net 10"
 website = "https://genhttp.org/"
 category = "web-server"
 tier = "micro"

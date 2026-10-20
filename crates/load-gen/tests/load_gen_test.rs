@@ -3,7 +3,7 @@ use load_gen::stats::WorkerStats;
 
 #[test]
 fn test_latency_recorder_quantiles() {
-    let mut recorder = LatencyRecorder::default();
+    let mut recorder = LatencyRecorder::new().expect("create latency histogram");
     recorder.record_micros(100);
     recorder.record_micros(200);
     recorder.record_micros(300);
@@ -18,7 +18,7 @@ fn test_latency_recorder_quantiles() {
 
 #[test]
 fn test_latency_recorder_coordinated_omission() {
-    let mut recorder = LatencyRecorder::default();
+    let mut recorder = LatencyRecorder::new().expect("create latency histogram");
     recorder.record_micros_corrected(10_000, 1_000);
 
     let dist = recorder.export_distribution();

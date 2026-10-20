@@ -32,7 +32,7 @@ pub struct LatencyDistribution {
     pub std_dev_us: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct ResourceUsage {
     pub peak_rss_bytes: u64,
     pub avg_rss_bytes: u64,

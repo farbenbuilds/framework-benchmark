@@ -11,3 +11,4 @@ Agoo::Server.handle(:GET, '/healthz', ->(_) { HEALTH })
 Agoo::Server.handle(:GET, '/plaintext', ->(_) { PLAINTEXT })
 Agoo::Server.handle(:GET, '/json', ->(_) { JSON })
 Agoo::Server.start
+sleep

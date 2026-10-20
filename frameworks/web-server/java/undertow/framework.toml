@@ -1,6 +1,6 @@
 [framework]
 name = "undertow"
-version = "2.3.18.Final"
+version = "2.4.4.Final"
 language = "java"
 language_version = "21"
 website = "https://undertow.io/"

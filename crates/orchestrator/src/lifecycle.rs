@@ -3,20 +3,7 @@ use common::manifest::FrameworkManifest;
 use common::result::{LibcVariant, RunProvenance, RunResult};
 use std::path::Path;
 
-#[derive(Debug, Clone, Copy)]
-pub struct SuiteTiming {
-    pub warmup_secs: u64,
-    pub cooldown_secs: u64,
-}
-
-impl Default for SuiteTiming {
-    fn default() -> Self {
-        Self {
-            warmup_secs: 15,
-            cooldown_secs: 10,
-        }
-    }
-}
+pub use crate::suite_timing::SuiteTiming;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SuiteExecutionConfig<'a> {
@@ -46,7 +33,7 @@ pub async fn run_framework_test(
         libc,
         target_pid: None,
         cgroup_dir: None,
-        timing: SuiteTiming::default(),
+        timing: SuiteTiming::for_environment(),
         extended_profiles: false,
     };
     let metrics =
@@ -70,7 +57,7 @@ pub async fn run_framework_suite(
         libc,
         target_pid,
         cgroup_dir,
-        timing: SuiteTiming::default(),
+        timing: SuiteTiming::for_environment(),
         extended_profiles: true,
     };
     run_framework_suite_with_timing(manifest, config).await
@@ -99,6 +86,7 @@ pub async fn run_framework_suite_with_timing(
                 config.duration_secs,
                 config.target_pid,
                 config.cgroup_dir,
+                config.timing,
             )
             .await?,
         );

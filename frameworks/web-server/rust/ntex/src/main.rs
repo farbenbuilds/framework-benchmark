@@ -1,10 +1,11 @@
 use ntex::web::{self, App, HttpResponse, HttpServer, Responder};
+use ntex::SharedCfg;
 
 const JSON: &[u8] = b"{\"message\":\"Hello, World!\"}";
 
 #[web::get("/healthz")]
 async fn healthz() -> impl Responder {
-    HttpResponse::Ok().finish()
+    HttpResponse::Ok().build()
 }
 
 #[web::get("/plaintext")]
@@ -23,8 +24,8 @@ async fn json() -> impl Responder {
 
 #[ntex::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(healthz).service(plaintext).service(json))
-        .bind(("0.0.0.0", 8080))?
+    HttpServer::new(async |_| App::new().service(healthz).service(plaintext).service(json))
+        .bind(("0.0.0.0", 8080), SharedCfg::new("ntex-benchmark"))?
         .run()
         .await
 }

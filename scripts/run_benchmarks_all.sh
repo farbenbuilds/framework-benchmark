@@ -6,7 +6,7 @@ repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
 
 "$script_dir/validate_environment.sh"
 cd "$repo_root"
-cargo build --release --bin orchestrator
+cargo build --release --locked --bin orchestrator
 if [ -n "${BENCHMARK_LOAD_CPUS:-}" ]; then
     exec taskset --cpu-list "$BENCHMARK_LOAD_CPUS" ./target/release/orchestrator frameworks results
 fi

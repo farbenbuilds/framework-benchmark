@@ -1,8 +1,8 @@
 [framework]
 name = "ntex"
-version = "2.8.0"
+version = "4.3.0"
 language = "rust"
-language_version = "1.88"
+language_version = "1.97"
 website = "https://github.com/ntex-rs/ntex"
 category = "web-server"
 tier = "micro"

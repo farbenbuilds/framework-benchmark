@@ -55,8 +55,7 @@ impl AutobahnSuiteRunner {
         };
         let _ = stream.set_nodelay(true);
         if let Err(error) = perform_handshake(&mut stream, addr, path, deadline).await {
-            stats.record_error();
-            return Err(error);
+            return finish_or_error(error, deadline, stats);
         }
 
         let msg = "framework-benchmark-echo";
@@ -67,16 +66,12 @@ impl AutobahnSuiteRunner {
         while Instant::now() < deadline {
             let start = Instant::now();
             if let Err(error) = write_until(&mut stream, &frame, deadline).await {
-                stats.record_error();
-                return Err(error);
+                return finish_or_error(error, deadline, stats);
             }
             let frame_len =
                 match read_echo_frame(&mut stream, msg.as_bytes(), &mut buf, deadline).await {
                     Ok(frame_len) => frame_len,
-                    Err(error) => {
-                        stats.record_error();
-                        return Err(error);
-                    }
+                    Err(error) => return finish_or_error(error, deadline, stats),
                 };
             let elapsed_us = start.elapsed().as_micros() as u64;
             recorder.record_micros(elapsed_us);
@@ -113,6 +108,18 @@ impl AutobahnSuiteRunner {
     }
 }
 
+fn finish_or_error(
+    error: LoadGenError,
+    deadline: Instant,
+    stats: &mut WorkerStats,
+) -> Result<(), LoadGenError> {
+    if Instant::now() >= deadline {
+        return Ok(());
+    }
+    stats.record_error();
+    Err(error)
+}
+
 async fn read_echo_frame(
     stream: &mut TcpStream,
     expected: &[u8],
@@ -136,5 +143,31 @@ async fn read_echo_frame(
             ));
         }
         used += read;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::finish_or_error;
+    use crate::error::LoadGenError;
+    use crate::stats::WorkerStats;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn expiry_is_not_a_server_error() {
+        let mut stats = WorkerStats::default();
+        let deadline = Instant::now()
+            .checked_sub(Duration::from_millis(1))
+            .expect("test deadline");
+        assert!(finish_or_error(LoadGenError::Timeout, deadline, &mut stats).is_ok());
+        assert_eq!(stats.errors, 0);
+    }
+
+    #[test]
+    fn early_failure_is_recorded() {
+        let mut stats = WorkerStats::default();
+        let deadline = Instant::now() + Duration::from_secs(1);
+        assert!(finish_or_error(LoadGenError::Timeout, deadline, &mut stats).is_err());
+        assert_eq!(stats.errors, 1);
     }
 }

@@ -53,20 +53,6 @@ pub(super) fn shutdown_signal(value: Option<&str>) -> Result<&str, OrchestratorE
     )))
 }
 
-pub(super) fn isolation_args(
-    cpuset_cpus: Option<&str>,
-    cgroup_parent: Option<&str>,
-) -> Vec<String> {
-    let mut args = Vec::with_capacity(4);
-    if let Some(cpus) = cpuset_cpus {
-        args.extend(["--cpuset-cpus".into(), cpus.into()]);
-    }
-    if let Some(parent) = cgroup_parent {
-        args.extend(["--cgroup-parent".into(), parent.into()]);
-    }
-    args
-}
-
 pub(super) fn stop_args(name: &str) -> [&str; 4] {
     ["stop", "--time", "5", name]
 }
@@ -133,11 +119,7 @@ mod tests {
     }
 
     #[test]
-    fn docker_arguments_include_explicit_isolation_and_timeout() {
-        assert_eq!(
-            isolation_args(Some("2-7"), Some("benchmark.slice")),
-            ["--cpuset-cpus", "2-7", "--cgroup-parent", "benchmark.slice"]
-        );
+    fn docker_stop_arguments_include_a_graceful_timeout() {
         assert_eq!(stop_args("target"), ["stop", "--time", "5", "target"]);
     }
 }

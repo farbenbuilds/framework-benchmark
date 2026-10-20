@@ -1,6 +1,6 @@
 # Framework Benchmark Coding Conventions
 
-These conventions adapt the Linux Kernel Coding Style to Rust (edition 2024 / 1.85+), emphasizing pragmatism, performance, readability, and deterministic behavior.
+These conventions adapt the Linux Kernel Coding Style to Rust (edition 2024 / 1.90+), emphasizing pragmatism, performance, readability, and deterministic behavior.
 
 ## 1. Core General Rules
 - **No Emojis**: Emojis are strictly forbidden anywhere in the repository, including code, comments, documentation, commit messages, and PRs.

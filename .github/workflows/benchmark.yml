@@ -11,6 +11,9 @@ on:
     # Run nightly at 00:00 UTC
     - cron: '0 0 * * *'
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -19,6 +22,7 @@ jobs:
   benchmark:
     name: Run Benchmark Suite
     runs-on: [self-hosted, linux, x64, benchmark-dedicated]
+    timeout-minutes: 360
     env:
       BENCHMARK_FRAMEWORK_FILTER: ${{ inputs.framework_filter || 'all' }}
       BENCHMARK_DEDICATED_HOST: '1'
@@ -27,13 +31,17 @@ jobs:
       BENCHMARK_CGROUP_PARENT: framework-benchmark
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install stable Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: "1.90.0"
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.cargo/registry/index/
@@ -48,13 +56,18 @@ jobs:
         run: sh scripts/verify_host.sh --require-dedicated
 
       - name: Build benchmark orchestrator
-        run: cargo build --release --bin orchestrator
+        run: cargo build --release --locked --bin orchestrator
 
       - name: Run orchestrator
         run: taskset --cpu-list "$BENCHMARK_LOAD_CPUS" ./target/release/orchestrator frameworks results
 
+      - name: Clean up benchmark resources
+        if: always()
+        continue-on-error: true
+        run: sh scripts/cleanup_environment.sh --apply
+
       - name: Upload benchmark artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: benchmark-results
           path: |

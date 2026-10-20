@@ -40,6 +40,16 @@ check_cgroup() {
     grep -q cgroup2 /proc/mounts || fail 'cgroups v2 is not mounted.'
 }
 
+check_small_host() {
+    [ "${BENCHMARK_SMALL_HOST:-0}" = 1 ] || return
+    cpus=$(nproc 2>/dev/null || echo 1)
+    [ "$cpus" -ge 2 ] || fail 'small-host profile needs at least 2 vCPUs.'
+    total_kb=$(awk '/MemTotal:/ { print $2 }' /proc/meminfo 2>/dev/null || echo 0)
+    [ "${total_kb:-0}" -ge 6291456 ] || fail 'small-host profile needs at least 6 GiB total memory.'
+    [ -n "${BENCHMARK_TARGET_CPUS:-}" ] || fail 'BENCHMARK_TARGET_CPUS is required for the small-host profile.'
+    [ -n "${BENCHMARK_LOAD_CPUS:-}" ] || fail 'BENCHMARK_LOAD_CPUS is required for the small-host profile.'
+}
+
 find_runtime
 require_command cargo
 require_command git
@@ -49,6 +59,7 @@ if [ -n "$runtime" ]; then
     check_compose
 fi
 check_cgroup
+check_small_host
 
 memory_kb=$(awk '/MemAvailable:/ { print $2 }' /proc/meminfo 2>/dev/null || true)
 [ "${memory_kb:-0}" -ge 1048576 ] || fail 'Less than 1 GiB of available memory.'

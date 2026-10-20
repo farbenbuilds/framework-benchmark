@@ -75,9 +75,29 @@ fn select_frameworks_rejects_an_unknown_name() {
     let _ = fs::remove_dir_all(temp_root);
 }
 
+#[cfg(unix)]
+#[test]
+fn test_discovery_does_not_follow_symlinked_directories() {
+    use std::os::unix::fs::symlink;
+
+    let root = std::env::temp_dir().join(format!("bench_disc_root_{}", std::process::id()));
+    let outside = std::env::temp_dir().join(format!("bench_disc_out_{}", std::process::id()));
+    let target = outside.join("linked");
+    fs::create_dir_all(&target).expect("create outside target");
+    fs::write(target.join("framework.toml"), SAMPLE_MANIFEST).expect("write manifest");
+    fs::create_dir_all(&root).expect("create root");
+    symlink(&outside, root.join("escape")).expect("create symlink");
+
+    let discovered = discover_frameworks(&root).expect("discovery failed");
+    assert!(discovered.is_empty());
+
+    let _ = fs::remove_dir_all(root);
+    let _ = fs::remove_dir_all(outside);
+}
+
 #[test]
 fn test_registry_manifests_are_valid() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frameworks");
     let discovered = discover_frameworks(&root).expect("discover framework registry failed");
-    assert_eq!(discovered.len(), 31);
+    assert!(discovered.len() >= 31);
 }

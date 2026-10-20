@@ -1,0 +1,7 @@
+.git/
+.agents/
+.direnv/
+.graphifyignore
+graphify-out/
+results/
+target/

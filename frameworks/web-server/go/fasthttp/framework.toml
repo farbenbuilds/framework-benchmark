@@ -1,8 +1,8 @@
 [framework]
 name = "fasthttp"
-version = "1.58.0"
+version = "1.76.0"
 language = "go"
-language_version = "1.23"
+language_version = "1.26"
 website = "https://github.com/valyala/fasthttp"
 category = "web-server"
 tier = "micro"

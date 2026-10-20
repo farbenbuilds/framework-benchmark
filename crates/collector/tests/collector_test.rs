@@ -107,3 +107,24 @@ fn test_runtime_counter_delta() {
     assert!((usage.cpu_kernel_pct - 25.0).abs() < f32::EPSILON);
     assert_eq!(usage.context_switches, 12);
 }
+
+#[test]
+fn test_page_cache_hit_ratio_saturates_totals() {
+    let metrics = EbpfMetrics {
+        page_cache_hits: u64::MAX,
+        page_cache_misses: 1,
+        ..EbpfMetrics::default()
+    };
+    let ratio = page_cache_hit_ratio(metrics).expect("ratio for saturated counters");
+    assert!((ratio - 1.0).abs() < f64::EPSILON);
+}
+
+#[test]
+fn test_harvest_aggregator_sample_count_saturates() {
+    let mut agg = HarvestAggregator {
+        sample_count: u64::MAX,
+        ..HarvestAggregator::default()
+    };
+    agg.record_sample(1);
+    assert_eq!(agg.sample_count, u64::MAX);
+}

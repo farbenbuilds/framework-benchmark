@@ -11,7 +11,7 @@ check_emojis() {
     files | while IFS= read -r file; do
         [ -f "$file" ] || continue
         case $file in .agents/skills/*) continue ;; esac
-        LC_ALL=C grep -P '[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]' "$file" \
+        LC_ALL=C grep -P '[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]|\p{Extended_Pictographic}' "$file" \
             >/dev/null 2>&1 && printf '%s\n' "$file"
     done
 }
@@ -28,9 +28,9 @@ check_lines() {
 check_markers() {
     files | while IFS= read -r file; do
         [ -f "$file" ] || continue
-        case $file in scripts/check_conventions.*) continue ;; esac
+        case $file in scripts/check_conventions.*|.github/ISSUE_TEMPLATE/*) continue ;; esac
         case $file in *.rs|*.sh|*.toml|*.yml|*.yaml)
-            grep -nE '\b(FIXME|XXX|HACK)\b' "$file" >/dev/null 2>&1 && printf '%s\n' "$file"
+            grep -nE '\b(TODO|FIXME|XXX|HACK)\b' "$file" >/dev/null 2>&1 && printf '%s\n' "$file"
         esac
     done
 }

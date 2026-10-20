@@ -16,5 +16,5 @@ app = proc do |env|
   end
 end
 
-Iodine.listen(service: :http, port: 8080, handler: app)
+Iodine.listen(url: 'http://0.0.0.0:8080', handler: app)
 Iodine.start

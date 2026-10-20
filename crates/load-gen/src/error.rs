@@ -11,6 +11,9 @@ pub enum LoadGenError {
     #[error("histogram error: {0}")]
     Histogram(#[from] hdrhistogram::RecordError),
 
+    #[error("histogram creation error: {0}")]
+    HistogramCreation(#[from] hdrhistogram::CreationError),
+
     #[error("protocol error: {0}")]
     Protocol(String),
 

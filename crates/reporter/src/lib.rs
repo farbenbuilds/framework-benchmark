@@ -1,16 +1,20 @@
 pub mod archive;
+pub mod artifacts;
 pub mod chart;
 pub mod error;
 pub mod history;
 pub mod index;
 pub mod logic;
 pub mod markdown;
+pub mod safety;
 mod storage;
 
 pub use archive::{timestamped_result_path, timestamped_result_relative_path, write_result_json};
+pub use artifacts::write_leaderboard_artifacts;
 pub use chart::generate_throughput_svg;
 pub use error::ReporterError;
 pub use history::load_historical_results;
 pub use index::{HistoricalIndex, IndexEntry, update_historical_index};
 pub use logic::{LeaderboardRow, aggregate_leaderboard};
 pub use markdown::{render_markdown_table, render_readme_leaderboards, update_readme_leaderboard};
+pub use safety::{safe_component, safe_file_name, safe_relative_path};

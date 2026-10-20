@@ -48,7 +48,9 @@ Every benchmark trial follows a deterministic state machine:
 7. **Teardown**: Send SIGTERM to the container, wait for graceful exit, or issue SIGKILL after 5 seconds.
 8. **Process Metrics**: Read collected HDR histogram and cgroups stats, serialize to JSON, and clean up.
 
+The 2 vCPU / 8 GB OpenStack profile uses a 5-second warmup, 10-second sample, and 3-second cooldown. Results from that profile are for adapter validation only; publish comparative results only from a labelled dedicated host.
+
 ## Load Generation and Latency Tracking
 - Built on Tokio TCP streams and httparse response framing.
 - Latency samples are recorded in microsecond-resolution **HDR Histograms**.
-- **Coordinated Omission**: Uses a scheduled issuance model so request delays under queue saturation are recorded in the histogram rather than silently dropped.
+- **Coordinated Omission**: Paced plans use a scheduled issuance model and HDR correction so request delays under queue saturation are recorded rather than silently dropped. Standard closed-loop plans measure service latency; they are not reported as open-loop client latency.

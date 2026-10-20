@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="GenHTTP.Core" Version="9.5.0" />
-    <PackageReference Include="GenHTTP.Modules.Practices" Version="9.5.0" />
+    <PackageReference Include="GenHTTP.Core" Version="11.1.0" />
+    <PackageReference Include="GenHTTP.Modules.Practices" Version="11.1.0" />
   </ItemGroup>
 </Project>

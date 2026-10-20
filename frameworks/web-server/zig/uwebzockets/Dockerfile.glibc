@@ -1,15 +1,18 @@
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS builder
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS builder
 WORKDIR /usr/src/app
 RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl git xz-utils && rm -rf /var/lib/apt/lists/*
-RUN curl -sSL https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz | tar -xJ -C /opt && ln -s /opt/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
+RUN curl -fsSL -o /tmp/zig.tar.xz https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz && \
+    tar -xJf /tmp/zig.tar.xz -C /opt && rm /tmp/zig.tar.xz && \
+    ln -s /opt/zig-x86_64-linux-0.16.0/zig /usr/local/bin/zig
 RUN git config --global url."https://github.com/".insteadOf git@github.com: && git init /opt/zuws && git -C /opt/zuws remote add origin https://github.com/harmony-co/zuws.git && git -C /opt/zuws fetch --depth 1 origin cb360ea5cf6706660b60ba5e79ea3b0a61899cc6 && git -C /opt/zuws checkout --detach FETCH_HEAD && git -C /opt/zuws submodule update --init --depth 1 --recursive && sed -i 's/return c.uws_ws(self, pattern, b);/return c.uws_ws(self, @ptrCast(pattern), b);/' /opt/zuws/src/app.zig && sed -i 's/)(self, pattern, handler);/)(self, @ptrCast(pattern), handler);/' /opt/zuws/src/app.zig
 COPY . .
 RUN ln -s /opt/zuws uz
 RUN zig build -Doptimize=ReleaseFast
 
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
 WORKDIR /app
-RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/src/app/zig-out/bin/server /app/server
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["/app/server"]

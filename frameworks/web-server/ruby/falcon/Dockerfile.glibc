@@ -1,9 +1,13 @@
-FROM ruby:3.3-bookworm@sha256:b899e7de6ffa6e974d947202d3ce2ac921c12e46c14cff3106214079388dcff4
+FROM ruby:3.4.11-trixie@sha256:2547cdb5a1345b26a01f6c605f0cd0754ee66f041df5c8b6cbdf717e2f5a8d9e
 WORKDIR /app
-RUN apt-get update -qq && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 COPY Gemfile ./
-RUN bundle install
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends build-essential && \
+    bundle install && \
+    apt-get purge -y --auto-remove build-essential && \
+    rm -rf /var/lib/apt/lists/* /usr/local/bundle/cache
 COPY config.ru ./
 EXPOSE 8080
 ENV RUBY_YJIT_ENABLE=1
+USER 10001:10001
 ENTRYPOINT ["sh", "-c", "exec falcon serve --bind http://0.0.0.0:8080 --count ${BENCHMARK_WORKERS:-1}"]

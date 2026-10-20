@@ -13,7 +13,10 @@ async fn main() -> Result<(), OrchestratorError> {
     let frameworks_dir = args.get(1).map_or("frameworks", String::as_str);
     let output_dir = args.get(2).map_or("results", String::as_str);
 
-    println!("==> Farben Framework Benchmark Orchestrator v0.1.0");
+    println!(
+        "==> Farben Framework Benchmark Orchestrator v{}",
+        env!("CARGO_PKG_VERSION")
+    );
     println!("==> Scanning framework registry at: {frameworks_dir}");
 
     let filter = env::var("BENCHMARK_FRAMEWORK_FILTER").unwrap_or_else(|_| "all".into());
@@ -34,7 +37,10 @@ async fn main() -> Result<(), OrchestratorError> {
             || capabilities.fortunes
             || capabilities.updates
     });
-    let database = if has_database_workloads {
+    let manage_container = BenchmarkSessionConfig::default().manage_container;
+    let manage_database =
+        env::var("BENCHMARK_DATABASE_MANAGED").map_or(manage_container, |value| value != "0");
+    let database = if has_database_workloads && manage_database {
         start_database(Path::new("."))?
     } else {
         None
@@ -45,7 +51,6 @@ async fn main() -> Result<(), OrchestratorError> {
         database_url: env::var("DATABASE_URL")
             .ok()
             .or_else(|| database.as_ref().map(|_| DEFAULT_DATABASE_URL.into())),
-        manage_container: env::var("BENCHMARK_MANAGE_CONTAINER").map_or(true, |value| value != "0"),
         ..BenchmarkSessionConfig::default()
     };
 
@@ -88,6 +93,7 @@ async fn main() -> Result<(), OrchestratorError> {
             )));
         }
         if !results.is_empty() {
+            reporter::write_leaderboard_artifacts(Path::new(output_dir), &results)?;
             update_readme_leaderboard(Path::new("README.md"), &results)?;
         }
         Ok(())
@@ -125,8 +131,14 @@ fn require_dedicated_host_for_matrix(filter: &str) -> Result<(), OrchestratorErr
     if env::var("BENCHMARK_DEDICATED_HOST").is_ok_and(|value| value == "1") {
         return Ok(());
     }
+    if orchestrator::host_profile::small_host() {
+        println!(
+            "==> Small-host profile enabled; use BENCHMARK_FRAMEWORK_FILTER for a bounded matrix."
+        );
+        return Ok(());
+    }
     Err(OrchestratorError::Process(
-        "full matrix requires BENCHMARK_DEDICATED_HOST=1".into(),
+        "full matrix requires BENCHMARK_DEDICATED_HOST=1 or BENCHMARK_SMALL_HOST=1".into(),
     ))
 }
 

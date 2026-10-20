@@ -107,10 +107,56 @@ fn xml_text(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::xml_text;
+    use super::{generate_throughput_svg, xml_text};
+    use crate::logic::LeaderboardRow;
+
+    fn row(framework: &str) -> LeaderboardRow {
+        LeaderboardRow {
+            rank: 1,
+            framework: framework.into(),
+            framework_version: "1.0".into(),
+            libc: "glibc".into(),
+            concurrency: 64,
+            duration_secs: 10,
+            requests_total: 100,
+            requests_per_sec: 10.0,
+            transfer_mb_per_sec: 1.0,
+            min_latency_ms: 1.0,
+            p50_latency_ms: 1.0,
+            p75_latency_ms: 1.0,
+            p90_latency_ms: 1.0,
+            p99_latency_ms: 1.0,
+            p99_9_latency_ms: 1.0,
+            p99_99_latency_ms: 1.0,
+            max_latency_ms: 1.0,
+            latency_std_dev_ms: 0.1,
+            peak_rss_mb: 1.0,
+            avg_rss_mb: 1.0,
+            cpu_user_pct: 1.0,
+            cpu_kernel_pct: 1.0,
+            context_switches: 1,
+            rapl_joules: None,
+            http_2xx: 1,
+            http_4xx: 0,
+            http_5xx: 0,
+            errors: 0,
+        }
+    }
 
     #[test]
     fn xml_text_escapes_element_and_attribute_delimiters() {
         assert_eq!(xml_text("<&>\"'"), "&lt;&amp;&gt;&quot;&apos;");
+    }
+
+    #[test]
+    fn svg_output_escapes_untrusted_labels() {
+        let svg = generate_throughput_svg(
+            &[row("<script>alert(1)</script>")],
+            "</text><script>alert(2)</script>",
+        );
+
+        assert!(!svg.contains("<script>"));
+        assert!(svg.contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
+        assert!(svg.contains("&lt;/text&gt;&lt;script&gt;alert(2)&lt;/script&gt;"));
     }
 }

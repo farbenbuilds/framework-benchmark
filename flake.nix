@@ -34,7 +34,7 @@
           overlays = [rustOverlay];
         };
 
-        rustToolchain = pkgsWithRust.rust-bin.stable."1.85.0".default.override {
+        rustToolchain = pkgsWithRust.rust-bin.stable."1.90.0".default.override {
           extensions = ["rust-src" "rust-analyzer" "clippy" "rustfmt"];
         };
 
@@ -50,8 +50,17 @@
           in
             !lib.elem name [
               ".git"
-              "target"
+              ".zig-cache"
+              "bin"
+              "graphify-out"
+              "node_modules"
+              "obj"
+              "out"
               "result"
+              "server.log"
+              "target"
+              "zig-cache"
+              "zig-out"
               ".cargo"
             ];
         };
@@ -64,7 +73,6 @@
             cargoLock = {
               lockFile = ./Cargo.lock;
             };
-            nativeBuildInputs = [rustToolchain];
           };
 
         mkDevShell = packagePkgs: isMuslEnv:

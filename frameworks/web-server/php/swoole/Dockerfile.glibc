@@ -1,7 +1,12 @@
-FROM php:8.3-cli-bookworm@sha256:c24b55afdf860c874b9ec6267ced132ff52de97d308ab08e6cf41e8596e509f7
-RUN apt-get update -qq && apt-get install -y --no-install-recommends libssl-dev libcurl4-openssl-dev && rm -rf /var/lib/apt/lists/*
-RUN pecl install swoole && docker-php-ext-enable swoole
+FROM php:8.5.11-cli-trixie@sha256:01a109229f4465bc9ef042d9198f09a4d9da7775a825dbd8572dcdbd8756c4d3
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends $PHPIZE_DEPS libssl-dev libcurl4-openssl-dev && \
+    pecl install swoole-6.2.3 && docker-php-ext-enable swoole && \
+    apt-get purge -y --auto-remove $PHPIZE_DEPS libssl-dev libcurl4-openssl-dev && \
+    apt-get install -y --no-install-recommends libstdc++6 && \
+    rm -rf /var/lib/apt/lists/* /tmp/pear
 WORKDIR /app
 COPY server.php ./
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["php", "server.php"]

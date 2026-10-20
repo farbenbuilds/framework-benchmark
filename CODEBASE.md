@@ -36,6 +36,8 @@ framework-benchmark/
 │   ├── architecture.md        # Detailed engine architecture and lifecycle state machine
 │   ├── data_oriented_design.md# Data-oriented memory layout and SoA guidelines
 │   ├── separation_of_concerns.md# Architectural layer boundaries and decomposition
+│   ├── small_host.md          # Bounded 2 vCPU / 8 GB OpenStack test workflow
+│   ├── graphify.md            # Optional code knowledge graph for agent reviews
 │   ├── sub_agents.md          # Antigravity, OpenCode, and Codex sub-agent workflows
 │   └── roadmap/               # Modularized implementation phases
 ├── scripts/                   # Quality gate and verification scripts

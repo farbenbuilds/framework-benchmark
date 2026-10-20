@@ -1,8 +1,10 @@
-FROM python:3.12-alpine3.21@sha256:d4f9227f21409479c7fe92288f2e40b1a56ae591c8ad3b5446dfeaef90f67857
+FROM python:3.13.14-alpine3.24@sha256:399babc8b49529dabfd9c922f2b5eea81d611e4512e3ed250d75bd2e7683f4b0
 WORKDIR /app
-RUN apk add --no-cache gcc musl-dev linux-headers
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apk add --no-cache gcc musl-dev linux-headers && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apk del gcc musl-dev linux-headers
 COPY app.py ./
 EXPOSE 8080
+USER 10001:10001
 ENTRYPOINT ["sh", "-c", "exec granian --interface asgi --host 0.0.0.0 --port 8080 --loop uvloop --no-access-log --workers ${BENCHMARK_WORKERS:-1} app:app"]

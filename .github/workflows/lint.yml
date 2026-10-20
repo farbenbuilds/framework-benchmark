@@ -5,44 +5,56 @@ on:
     branches:
       - main
     paths:
+      - "**/*.md"
+      - "**/*.toml"
+      - "**/*.yml"
+      - "**/*.yaml"
       - Cargo.toml
       - Cargo.lock
       - crates/**
-      - scripts/check_conventions.sh
+      - frameworks/**
+      - scripts/**
+      - templates/**
       - .github/workflows/lint.yml
   pull_request:
     branches:
       - main
     paths:
+      - "**/*.md"
+      - "**/*.toml"
+      - "**/*.yml"
+      - "**/*.yaml"
       - Cargo.toml
       - Cargo.lock
       - crates/**
-      - scripts/check_conventions.sh
+      - frameworks/**
+      - scripts/**
+      - templates/**
       - .github/workflows/lint.yml
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   lint:
     name: Lint Rust Codebase
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    permissions:
-      contents: read
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
       - name: Install stable Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
-          toolchain: "1.85.0"
+          toolchain: "1.90.0"
           components: "clippy, rustfmt"
 
       - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
 
       - name: Ensure ripgrep
         shell: bash

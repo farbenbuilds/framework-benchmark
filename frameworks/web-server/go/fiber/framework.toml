@@ -1,8 +1,8 @@
 [framework]
 name = "fiber"
-version = "2.52.6"
+version = "3.6.1"
 language = "go"
-language_version = "1.23"
+language_version = "1.26"
 website = "https://gofiber.io/"
 category = "web-server"
 tier = "micro"

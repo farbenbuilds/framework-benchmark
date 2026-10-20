@@ -1,6 +1,6 @@
 [framework]
 name = "vertx"
-version = "4.5.10"
+version = "5.2.1"
 language = "java"
 language_version = "21"
 website = "https://vertx.io/"

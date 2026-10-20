@@ -12,6 +12,7 @@ struct WorkerTask<'a> {
     pipeline_depth: usize,
     connection_mode: ConnectionMode,
     expected_interval: Option<Duration>,
+    next_issue: Instant,
     recorder: &'a mut LatencyRecorder,
     stats: &'a mut WorkerStats,
 }
@@ -51,27 +52,30 @@ pub(crate) async fn run_connection_worker_with_buffers(
         connection_mode,
         expected_interval: (expected_interval_us > 0)
             .then(|| Duration::from_micros(expected_interval_us)),
+        next_issue: Instant::now(),
         recorder,
         stats,
     };
     while Instant::now() < task.deadline {
         let stream = connect_until(target_addr, task.deadline).await;
         let Ok(mut stream) = stream else {
+            if Instant::now() >= task.deadline {
+                return Ok(());
+            }
             task.stats.record_error();
             retry_after_error(task.deadline).await;
             continue;
         };
         let _ = stream.set_nodelay(true);
-        if process_connection_loop(
+        let result = process_connection_loop(
             &mut stream,
             request_bytes,
             &mut buffers.read_buf,
             &mut buffers.starts,
             &mut task,
         )
-        .await
-        .is_err()
-        {
+        .await;
+        if result.is_err() && Instant::now() < task.deadline {
             task.stats.record_error();
         }
     }
@@ -84,18 +88,22 @@ async fn process_connection_loop(
     starts: &mut Vec<Instant>,
     task: &mut WorkerTask<'_>,
 ) -> Result<(), LoadGenError> {
-    let mut next_issue = Instant::now();
     let mut used = 0;
     while Instant::now() < task.deadline {
+        if used != 0 {
+            return Err(LoadGenError::Protocol(
+                "unexpected bytes after response batch".into(),
+            ));
+        }
         starts.clear();
         for _ in 0..task.pipeline_depth {
-            if !wait_until(next_issue, task.deadline).await {
+            if !wait_until(task.next_issue, task.deadline).await {
                 return Ok(());
             }
             let start = Instant::now();
             write_until(stream, request_bytes, task.deadline).await?;
             starts.push(start);
-            next_issue = next_issue_at(task.expected_interval, next_issue, task.deadline);
+            task.next_issue = next_issue_at(task.expected_interval, task.next_issue, task.deadline);
         }
         used = read_batch(stream, read_buf, used, starts, task).await?;
         if task.connection_mode == ConnectionMode::Churn {
