@@ -8,7 +8,7 @@ Developing, maintaining, and running reproducible bare-metal benchmarks across d
 
 You can sponsor our work directly through GitHub Sponsors:
 
-- **GitHub Sponsors**: [github.com/sponsors/Coder-Blue](https://github.com/sponsors/Coder-Blue)
+- **GitHub Sponsors**: [github.com/sponsors/farbenbuilds](https://github.com/sponsors/farbenbuilds)
 
 ## Organization
 
